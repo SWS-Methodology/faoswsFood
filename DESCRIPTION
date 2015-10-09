@@ -9,6 +9,8 @@ Maintainer: Joshua Browning <joshua.browning@fao.org>
 Description: This package provides all the functions to perform computation of food consumption for the FAO food balance sheets.
 URL: https://github.com/SWS-Methodology/faoswsFood
 License: GPL (>= 3)
+Depends:
+	faosws
 LazyData: yes
 ZipData: no
 VignetteBuilder: knitr
