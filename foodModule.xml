@@ -6,10 +6,11 @@
 	<Category>Imputation</Category>
 	<Authors>
 		<Author>
-			<Name>Natalia Golini</Name>
-			<Mail>natalia.golini@fao.org</Mail>
+			<Name>Josh Browning</Name>
+			<Mail>joshua.browning@fao.org</Mail>
 		</Author>
 	</Authors>
+	<!--
 	<Params>
 		<Param xsi:type="Number">
 	        <Code>yearToProcess</Code>
@@ -27,19 +28,19 @@
 		        <Description>
 			    Please specify how many years should be used to estimate the variance.
 		        </Description>
-		        <Compulsory>true</Compulsory>
+		        <Compulsory>false</Compulsory>
                 <Min>3</Min>
                 <Max>10</Max>
 	    </Param>
 	</Params>
+	-->
 	<Datasets>
 		<MainDataset>
-			<Code>fbs_distrib</Code>
+			<Code>agriculture</Code>
 			<SelectableDimensions>
 				<SelectableDimension compulsory="true">geographicAreaM49</SelectableDimension>
 				<SelectableDimension compulsory="true">measuredElement</SelectableDimension>
 				<SelectableDimension compulsory="true">measuredItemCPC</SelectableDimension>
-				<SelectableDimension compulsory="true">fbsDistribParam</SelectableDimension>
 				<SelectableDimension compulsory="true">timePointYears</SelectableDimension>                
 			</SelectableDimensions>
 		</MainDataset>

@@ -9,7 +9,7 @@
 ##'   
 ##' @return A list with two objects: a vector of the corresponding food demand 
 ##'   codes and a vector of the corresponding food commodity codes.
-##'   
+##' 
 
 commodity2FunctionalForm <- function(commodityCode){
     map = fread("~/Documents/Github/faoswsFood/Data/commodityCodeMap.csv")

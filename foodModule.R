@@ -16,8 +16,11 @@ R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
 DEBUG_MODE <- Sys.getenv("R_DEBUG_MODE")
 
 if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
-    token <- "c2307a1a-e69e-4231-afbd-e19c9b9021aa"
-    GetTestEnvironment("https://hqlprswsas1.hq.un.fao.org:8181/sws",token)
+    SetClientFiles(dir = "~/R certificate files/QA/")
+    GetTestEnvironment(
+        baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
+        token = "1adf2e52-0e7c-4b97-a29d-d68e5f846138"
+        )
     if(Sys.info()[7] == "josh"){ # Josh's work computer
         files = dir("~/Documents/Github/faoswsFood/R",
                     full.names = TRUE)
@@ -31,37 +34,33 @@ areaCodesM49 <- GetCodeList("population", "population", "geographicAreaM49")
 ## Filter areaCodes to "country" type only:
 areaCodesM49 <- areaCodesM49[type == "country", code]
 ## We need different area codes for the SUA domain
-areaCodesFS <- GetCodeList("faostat_one", dataset = "FS1_SUA_UPD",
-                           dimension = "geographicAreaFS")
-areaCodesFS <- areaCodesFS[type == "country", code]
-yearsForSD <- as.numeric(swsContext.computationParams$yearsForVar)
+# yearsForSD <- as.numeric(swsContext.computationParams$yearsForVar)
+yearsForSD <- as.numeric(swsContext.datasets[[1]]@dimensions$timePointYears@keys)
 ## We will need the year of imputation as well as previous years to compute the
 ## standard deviation.  We'll grab as many years as specified by the user.
-yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) +
-    (-yearsForSD:0)
-yearCodes <- as.character(yearCodes)
+# yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) +
+#     (-yearsForSD:0)
+# yearCodes <- as.character(yearCodes)
+yearCodes <- swsContext.datasets[[1]]@dimensions$timePointYears@keys
 ## GDP per capita (constant 2500 US$) is under this key
 gdpCodes <- "NY.GDP.PCAP.KD"
 ## The element 21 contains the FBS population numbers
 populationCodes <- "21"
 ## The element 141 contains the FBS food numbers
-foodCodes <- "141"
-suaCodes <- GetCodeList("faostat_one", "FS1_SUA_UPD", "measuredItemFS")$code
-comCodes <- GetCodeList("food", "food_factors","foodCommodity")$code
-fdmCodes <- GetCodeList("food", "food_factors","foodDemand")$code
+
+comCodes <- GetCodeList("food", "food_factors","foodCommodityM")$code
+fdmCodes <- GetCodeList("food", "food_factors","foodFdm")$code
 funCodes <- GetCodeList("food", "food_factors","foodFunction")$code
 varCodes <- "y_e" ## Only need elasticities from the food domain table
 
 ## Define the dimensions
 dimM49 <- Dimension(name = "geographicAreaM49", keys = areaCodesM49)
-dimFS <- Dimension(name = "geographicAreaFS", keys = areaCodesFS)
 dimPop <- Dimension(name = "measuredElementPopulation", keys = populationCodes)
 dimTime <- Dimension(name = "timePointYears", keys = yearCodes)
 dimGDP <- Dimension(name = "wbIndicator", keys = gdpCodes)
-dimFood <- Dimension(name = "measuredElementFS", keys = foodCodes)
-dimSua <- Dimension(name = "measuredItemFS", keys = suaCodes)
-dimCom <- Dimension(name = "foodCommodity", keys = comCodes)
-dimFdm <- Dimension(name = "foodDemand", keys = fdmCodes)
+
+dimCom <- Dimension(name = "foodCommodityM", keys = comCodes)
+dimFdm <- Dimension(name = "foodFdm", keys = fdmCodes)
 dimFun <- Dimension(name = "foodFunction", keys = funCodes)
 dimVar <- Dimension(name = "foodVariable", keys = varCodes)
 
@@ -77,8 +76,6 @@ keyPop <- DatasetKey(domain = "population", dataset = "population",
                      dimensions = list(dimM49, dimPop, dimTime))
 keyGDP <- DatasetKey(domain = "WorldBank", dataset = "wb_ecogrw",
                      dimensions = list(dimM49, dimGDP, dimTime))
-keyFood <- DatasetKey(domain = "faostat_one", dataset = "FS1_SUA_UPD",
-                      dimensions = list(dimFS, dimFood, dimSua, dimTime))
 keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
                      dimensions = list(dimM49, dimCom, dimFdm, dimFun, dimVar))
 
@@ -99,7 +96,7 @@ gdpData <- GetData(keyGDP, flags=FALSE, normalized = FALSE,
                    pivoting = c(pivotM49, pivotTime, pivotGDP))
 setnames(gdpData, "Value_wbIndicator_NY.GDP.PCAP.KD", "GDP")
 ## download the food data from the SWS
-foodData <- GetData(keyFood, flags = FALSE, normalized = TRUE)
+foodData <- getFoodData(timePointYears = yearCodes)
 setnames(foodData, "Value", "food")
 ## download the food dimension data (elasticities) from the SWS
 fdmData <- GetData(keyFdm, flags=FALSE, normalized = FALSE)
@@ -117,16 +114,12 @@ GdpPopData <- merge(popData, gdpData, all = TRUE,
 # foodData$com_cod <-  rep(NA,length(foodData$com_sua_cod))
 # foodData$fdm_cod <- rep(NA,length(foodData$com_sua_cod))
 
-funcCodes <- commodity2FunctionalForm(foodData$measuredItemFS)
+funcCodes <- commodity2FunctionalForm(
+    cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE))
 foodData <- cbind(foodData, do.call("cbind", funcCodes))
 foodData[, foodDemand := as.character(foodDemand)]
 foodData[, foodCommodity := as.character(foodCommodity)]
 foodData <- foodData[!is.na(foodDemand), ]
-foodData[, geographicAreaM49 := fs2m49(as.character(geographicAreaFS))]
-## Mapping creates some NA M49 codes.  Remove those rows, as they don't exist in
-## the FBS domain.
-foodData <- foodData[!is.na(geographicAreaM49), ]
-foodData[, geographicAreaFS := NULL]
 
 GdpPopFoodDataM49 = merge(foodData, GdpPopData, all.x = TRUE,
                           by = c("geographicAreaM49", "timePointYears"))
@@ -151,7 +144,7 @@ data_base[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
                                      gdp_pc = .SD$GDP/.SD$population,
                                      ## We can use the first value since they're all the same:
                                      functionalForm = .SD$foodFunction[1]),
-          by = c("measuredItemFS", "geographicAreaM49")]
+          by = c("measuredItemCPC", "geographicAreaM49")]
 
 # ## calculate calories  
 # data$hat_cal_pc_2013 <- ifelse(data$hat_food_pc_2012 > 0, data$hat_cal_pc_2012*
@@ -185,7 +178,7 @@ dataToSave <- data_base[,
     list(mean = foodHat[.N],
          var = mean(error^2, na.rm = TRUE),
          timePointYears = max(timePointYears)),
-    by = c("geographicAreaM49", "measuredElementFS", "measuredItemFS")]
+    by = c("geographicAreaM49", "measuredElement", "measuredItemCPC")]
 
 ## To convert from mu/sigma to logmu/logsigma, we can use the method of moments
 ## estimators (which express the parameters of the log-normal distribution in
@@ -204,13 +197,9 @@ dataToSave <- data_base[,
 
 ## Prepare data and save it to SWS
 dataToSave[, var := NULL]
-setnames(dataToSave, c("measuredElementFS", "mean"),
-         c("measuredElement", "Value"))
-dataToSave[, measuredItemFS := formatC(as.numeric(measuredItemFS), width = 4,
-                                       format = "g", flag = "0")]
-dataToSave[, measuredItemCPC := fcl2cpc(measuredItemFS)]
-dataToSave[, measuredItemFS := NULL]
+setnames(dataToSave, "mean", "Value")
 dataToSave[, measuredElement := "5141"]
 setcolorder(dataToSave, c("geographicAreaM49", "measuredElement",
                           "measuredItemCPC", "timePointYears", "Value"))
+
 SaveData(domain = "agriculture", dataset = "agriculture", data = dataToSave)
