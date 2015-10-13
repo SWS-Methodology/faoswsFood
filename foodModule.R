@@ -14,6 +14,7 @@ library(faoswsUtil)
 ## set up for the test environment and parameters
 R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
 DEBUG_MODE <- Sys.getenv("R_DEBUG_MODE")
+overwritableFlags = c("M", "I")
 
 if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
     SetClientFiles(dir = "~/R certificate files/QA/")
@@ -115,7 +116,7 @@ GdpPopData <- merge(popData, gdpData, all = TRUE,
 # foodData$fdm_cod <- rep(NA,length(foodData$com_sua_cod))
 
 funcCodes <- commodity2FunctionalForm(
-    cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE))
+    as.numeric(cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE)))
 foodData <- cbind(foodData, do.call("cbind", funcCodes))
 foodData[, foodDemand := as.character(foodDemand)]
 foodData[, foodCommodity := as.character(foodCommodity)]
@@ -202,4 +203,22 @@ dataToSave[, measuredElement := "5141"]
 setcolorder(dataToSave, c("geographicAreaM49", "measuredElement",
                           "measuredItemCPC", "timePointYears", "Value"))
 
-SaveData(domain = "agriculture", dataset = "agriculture", data = dataToSave)
+keys = c("geographicAreaM49", "measuredElement",
+         "measuredItemCPC", "timePointYears")
+
+# Remove official data from dataToSave.  foodData has the official data, just
+# need to remove missing and imputed
+foodData = foodData[!flagObservationStatus %in% overwritableFlags &
+                    !is.na(flagObservationStatus), ]
+dataToSave = merge(dataToSave, foodData[, c(keys, "food"), with = FALSE],
+          all.x = TRUE, by = keys)
+dataToSave = dataToSave[is.na(food), ]
+dataToSave[, food := NULL]
+dataToSave[, flagObservationStatus := "I"]
+dataToSave[, flagMethod := "e"]
+dataToSave = dataToSave[!is.na(Value), ]
+
+stats = SaveData(domain = "agriculture", dataset = "agriculture", data = dataToSave)
+paste0(stats$inserted, " observations written, ",
+       stats$ignored, " weren't updated, ",
+       stats$discarded, " had problems.")

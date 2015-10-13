@@ -12,7 +12,7 @@
 ##'   should be pulled from the old system.  This vector must be a subset of the
 ##'   timePointYears parameter.  Additionally, the default (NULL) will be 
 ##'   updated to contain all years of timePointYears that are less than 2012. 
-##'   This shoudl be appropriate, as new data is now created after 2011 (at 
+##'   This should be appropriate, as new data is now created after 2011 (at 
 ##'   least at the time of writing this function).
 ##'   
 ##' @return A data.table containing the food data.
@@ -45,13 +45,14 @@ getFoodData = function(timePointYears, oldSystemYears = NULL,
     oldData <- GetData(keyOld)
     
     ## Convert codes of old data
-    oldData[, geographicAreaM49 := fs2m49(as.character(geographicAreaFS))]
+    oldData[, geographicAreaM49 :=
+                faoswsUtil::fs2m49(as.character(geographicAreaFS))]
     ## Mapping creates some NA M49 codes.  Remove those rows, as they don't exist in
     ## the FBS domain.
     oldData <- oldData[!is.na(geographicAreaM49), ]
     oldData[, geographicAreaFS := NULL]
-    oldData[, measuredItemCPC := fcl2cpc(formatC(measuredItemFS, width = 4,
-                                                 flag = "0"))]
+    oldData[, measuredItemCPC :=
+                faoswsUtil::fcl2cpc(formatC(measuredItemFS, width = 4, flag = "0"))]
     oldData <- oldData[!is.na(measuredItemCPC), ]
     oldData[, measuredItemFS := NULL]
     oldData[, flagFaostat := NULL]
