@@ -52,7 +52,11 @@ getFoodData = function(timePointYears, oldSystemYears = NULL,
         commCodesFCL <- GetCodeList(domain = "faostat_one", dataset = "FS1_SUA_UPD",
                                     "measuredItemFS")$code
     } else {
-        commCodesFCL <- faoswsUtil::cpc2fcl(commCodesCPC, returnFirst = TRUE)
+        ## Hotfix until next version of faoswsUtil on server
+        commCodesFCL <- rep(NA, length(commCodesCPC))
+        commCodesFCL[commCodesCPC == "0112"] <- "0056"
+        commCodesFCL[commCodesCPC != "0112"] <-
+            faoswsUtil::cpc2fcl(commCodesCPC[commCodesCPC != "0112"], returnFirst = TRUE)
         commCodesFCL <- as.character(as.numeric(commCodesFCL))
         commCodesFCL <- commCodesFCL[!is.na(commCodesFCL)]
     }
