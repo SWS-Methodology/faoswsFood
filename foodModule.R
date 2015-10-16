@@ -8,8 +8,6 @@ library(faoswsUtil)
 ## - Check the input dataset from Josef against what's on the server: ask Nick for
 ## the file that Jim gave him with the elasticities, compare with Josef's file
 ## and figure out why we have differences.  Reload if necessary.
-## - Come up with a way to get commodity trees out of the system (additional
-## table? different hierarchy?)
 
 ## set up for the test environment and parameters
 R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
@@ -20,8 +18,9 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
     SetClientFiles(dir = "~/R certificate files/QA/")
     GetTestEnvironment(
         baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
-        token = "1adf2e52-0e7c-4b97-a29d-d68e5f846138"
+        token = "b42c86bc-ee6c-418c-9741-6747786e9bc1"
         )
+    R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
     if(Sys.info()[7] == "josh"){ # Josh's work computer
         files = dir("~/Documents/Github/faoswsFood/R",
                     full.names = TRUE)
@@ -29,11 +28,14 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
     sapply(files, source)
 }
 
+if(swsContext.computationParams$yearToProcess <= 2011)
+    stop("This module was designed for imputation on years after 2011 only!")
+
+cat("Defining variables/dimensions/keys/...\n")
+
 ## Define the keys that we'll need for all the dimensions
 ## set the keys to get the population data from the FAO working system
-areaCodesM49 <- GetCodeList("population", "population", "geographicAreaM49")
-## Filter areaCodes to "country" type only:
-areaCodesM49 <- areaCodesM49[type == "country", code]
+areaCodesM49 <- swsContext.datasets[[1]]@dimensions$geographicAreaM49@keys
 ## We need different area codes for the SUA domain
 # yearsForSD <- as.numeric(swsContext.computationParams$yearsForVar)
 yearsForSD <- as.numeric(swsContext.datasets[[1]]@dimensions$timePointYears@keys)
@@ -42,7 +44,11 @@ yearsForSD <- as.numeric(swsContext.datasets[[1]]@dimensions$timePointYears@keys
 # yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) +
 #     (-yearsForSD:0)
 # yearCodes <- as.character(yearCodes)
-yearCodes <- swsContext.datasets[[1]]@dimensions$timePointYears@keys
+# yearCodes <- swsContext.datasets[[1]]@dimensions$timePointYears@keys
+## We need the previous year to compute change in GDP.  This allows us to
+## calculate food in the new year.
+yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) - 1:0
+yearCodes <- as.character(yearCodes)
 ## GDP per capita (constant 2500 US$) is under this key
 gdpCodes <- "NY.GDP.PCAP.KD"
 ## The element 21 contains the FBS population numbers
@@ -81,6 +87,7 @@ keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
                      dimensions = list(dimM49, dimCom, dimFdm, dimFun, dimVar))
 
 ## Download all the datasets:
+cat("Download all the datasets...\n")
 
 ## download the population data from the SWS.  Using the pivoting argument, we 
 ## can specify the column order.  Since we're only pulling one key for the 
@@ -91,14 +98,25 @@ keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
 popData <- GetData(keyPop, flags=FALSE, normalized = FALSE,
                    pivoting = c(pivotM49, pivotTime, pivotPop))
 setnames(popData, "Value_measuredElementPopulation_21", "population")
+
 ## download the gdp data from the SWS.  We're again only pulling one wbIndicator
 ## dimension, so we'll do the same thing we did for population.
 gdpData <- GetData(keyGDP, flags=FALSE, normalized = FALSE,
                    pivoting = c(pivotM49, pivotTime, pivotGDP))
 setnames(gdpData, "Value_wbIndicator_NY.GDP.PCAP.KD", "GDP")
+
 ## download the food data from the SWS
-foodData <- getFoodData(timePointYears = yearCodes)
+foodData <- getFoodData(timePointYears = yearCodes, areaCodesM49 = areaCodesM49,
+                        commCodesCPC = swsContext.datasets[[1]]@dimensions$measuredItemCPC@keys)
 setnames(foodData, "Value", "food")
+funcCodes <- commodity2FunctionalForm(
+    as.numeric(cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE)))
+foodData <- cbind(foodData, do.call("cbind", funcCodes))
+foodData[, foodDemand := as.character(foodDemand)]
+foodData[, foodCommodity := as.character(foodCommodity)]
+foodData <- foodData[!is.na(foodDemand), ]
+cat("Food data downloaded with", nrow(foodData), "rows.\n")
+
 ## download the food dimension data (elasticities) from the SWS
 fdmData <- GetData(keyFdm, flags=FALSE, normalized = FALSE)
 setnames(fdmData, "Value_foodVariable_y_e", "elasticity")
@@ -107,58 +125,35 @@ setnames(fdmData, "foodCommodityM", "foodCommodity")
 
 ## Merge the datasets together, and perform some processing.
 
+cat("Merge population with GDP...\n")
 ## merge the current population and gross domestic product data into a single
 ## dataset
-GdpPopData <- merge(popData, gdpData, all = TRUE,
-                    by = c("geographicAreaM49", "timePointYears"))
+data <- merge(popData, gdpData, all = TRUE,
+              by = c("geographicAreaM49", "timePointYears"))
 
-# foodData$com_cod <-  rep(NA,length(foodData$com_sua_cod))
-# foodData$fdm_cod <- rep(NA,length(foodData$com_sua_cod))
+cat("Merge in food data...\n")
+data = merge(foodData, data, all = TRUE,
+             by = c("geographicAreaM49", "timePointYears"))
 
-funcCodes <- commodity2FunctionalForm(
-    as.numeric(cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE)))
-foodData <- cbind(foodData, do.call("cbind", funcCodes))
-foodData[, foodDemand := as.character(foodDemand)]
-foodData[, foodCommodity := as.character(foodCommodity)]
-foodData <- foodData[!is.na(foodDemand), ]
-
-GdpPopFoodDataM49 = merge(foodData, GdpPopData, all.x = TRUE,
-                          by = c("geographicAreaM49", "timePointYears"))
-
-data_base <- merge(GdpPopFoodDataM49, fdmData,
-                   by = c("foodCommodity","foodDemand", "geographicAreaM49"), 
-                   all.x = TRUE)
-
-## HACK: Remove rows with missing func_form.  This may not be the right thing to
-## do: we may need to update the elasticities table.
-data_base <- data_base[!is.na(foodFunction), ]
+cat("Merge in food demand model data...\n")
+data <- merge(data, fdmData,
+              by = c("foodCommodity","foodDemand", "geographicAreaM49"),
+              all.x = TRUE)
 
 ## First, sort the data by area and time.  The time sorting is important as we
 ## will later assume row i+1 is one time step past row i.
-setkeyv(data_base, c("geographicAreaM49", "timePointYears"))
+setkeyv(data, c("geographicAreaM49", "timePointYears"))
 
+cat("Estimate food using the food model...\n")
 ## The funcional form 4 (originally presented in Josef's data) was replaced by
 ## functional form 3 The functional form 32 is a typo. It was replaced by
 ## functional form 2 in Food Factors database.
-data_base[, foodFunction := ifelse(foodFunction == 4, 3, foodFunction)]
-data_base[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
-                                     gdp_pc = .SD$GDP/.SD$population,
-                                     ## We can use the first value since they're all the same:
-                                     functionalForm = .SD$foodFunction[1]),
-          by = c("measuredItemCPC", "geographicAreaM49")]
-
-# ## calculate calories  
-# data$hat_cal_pc_2013 <- ifelse(data$hat_food_pc_2012 > 0, data$hat_cal_pc_2012*
-#                                       data$hat_food_pc_2013/data$hat_food_pc_2012,0)
-# 
-# ## calculate proteins 
-# data$hat_prot_pc_2013 <- ifelse(data$hat_food_pc_2012 > 0, data$hat_prot_pc_2012*
-#                                        data$hat_food_pc_2013/data$hat_food_pc_2012,0)
-#   
-# ## calculate fats 
-# data$hat_fat_pc_2013 <- ifelse(data$hat_food_pc_2012 > 0, data$hat_fat_pc_2012*
-#                                       data$hat_food_pc_2013/data$hat_food_pc_2012,0)                  
-
+data[, foodFunction := ifelse(foodFunction == 4, 3, foodFunction)]
+data[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
+                                gdp_pc = .SD$GDP/.SD$population,
+                                ## We can use the first value since they're all the same:
+                                functionalForm = .SD$foodFunction[1]),
+     by = c("measuredItemCPC", "geographicAreaM49")]
 
 # In statistics, a forecast error is the difference between the actual or real
 # and the predicted or forecast value of a time series or any other phenomenon
@@ -169,17 +164,18 @@ data_base[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
 # or using a proportional error.
 # By convention, the error is defined using the value of the outcome minus the
 # value of the forecast.
-data_base[, error := food - foodHat]
+data[, error := food - foodHat]
 
 # Geographic Area, measuredElement = 141, measuredItem = SUA item code, Dist
 # Param = log(Mu) or log(Sigma), Year = Year
-dataToSave <- data_base[,
-    ## Since we're ordered by time, foodHat[.N] will give the last estimate for
-    ## the food element, and this is exactly what we want.
-    list(mean = foodHat[.N],
-         var = mean(error^2, na.rm = TRUE),
-         timePointYears = max(timePointYears)),
-    by = c("geographicAreaM49", "measuredElement", "measuredItemCPC")]
+# dataToSave <- data_base[,
+#     ## Since we're ordered by time, foodHat[.N] will give the last estimate for
+#     ## the food element, and this is exactly what we want.
+#     list(mean = foodHat[.N],
+#          var = mean(error^2, na.rm = TRUE),
+#          timePointYears = max(timePointYears)),
+#     by = c("geographicAreaM49", "measuredElement", "measuredItemCPC")]
+dataToSave <- data[timePointYears == swsContext.computationParams$yearToProcess, ]
 
 ## To convert from mu/sigma to logmu/logsigma, we can use the method of moments
 ## estimators (which express the parameters of the log-normal distribution in
@@ -197,11 +193,12 @@ dataToSave <- data_base[,
 #     measure.vars = c("lmu", "lsi"))
 
 ## Prepare data and save it to SWS
-dataToSave[, var := NULL]
-setnames(dataToSave, "mean", "Value")
+cat("Restructure and filter data to save to SWS...\n")
+setnames(dataToSave, "foodHat", "Value")
 dataToSave[, measuredElement := "5141"]
-setcolorder(dataToSave, c("geographicAreaM49", "measuredElement",
-                          "measuredItemCPC", "timePointYears", "Value"))
+dataToSave <- dataToSave[, c("geographicAreaM49", "measuredElement",
+                             "measuredItemCPC", "timePointYears", "Value"),
+                         with = FALSE]
 
 keys = c("geographicAreaM49", "measuredElement",
          "measuredItemCPC", "timePointYears")
@@ -217,6 +214,8 @@ dataToSave[, food := NULL]
 dataToSave[, flagObservationStatus := "I"]
 dataToSave[, flagMethod := "e"]
 dataToSave = dataToSave[!is.na(Value), ]
+
+cat("Save the final data...\n")
 
 stats = SaveData(domain = "agriculture", dataset = "agriculture", data = dataToSave)
 paste0(stats$inserted, " observations written, ",

@@ -21,14 +21,19 @@ calculateFood <- function(food, elas, gdp_pc, functionalForm){
     ## aggregated level.
     ## Elasticity parameter and functional forms are commodity and country 
     ## dependant.
-    if(functionalForm == 0){
-        func = linear
+    if(is.na(functionalForm)){
+        ## If functionalForm is missing, we have no way of computing the food. 
+        ## But, to avoid an error, we'll need a function that just returns NA no
+        ## matter what it is passed.
+        func = function(...){NA_real_}
     } else if(functionalForm == 1){
         func = logLog
     } else if(functionalForm == 2){
         func = semiLog
     } else if(functionalForm == 3){
         func = logInverse
+    } else if(functionalForm == 0){
+        func = linear
     } else {
         stop("A functionalForm other than 0, 1, 2, or 3 was encountered!",
              "  This is not currently implemented.")
@@ -38,6 +43,6 @@ calculateFood <- function(food, elas, gdp_pc, functionalForm){
     ## ahead).
     N = length(gdp_pc)
     gdp_pc_t1 = c(NA, gdp_pc[-N])
-    func(food_t0 = food, elas = elas, gdp_pc_t0 = gdp_pc,
+    func(food_t0 = c(NA, food[-N]), elas = elas, gdp_pc_t0 = gdp_pc,
          gdp_pc_t1 = gdp_pc_t1)
 }

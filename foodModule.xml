@@ -10,7 +10,6 @@
 			<Mail>joshua.browning@fao.org</Mail>
 		</Author>
 	</Authors>
-	<!--
 	<Params>
 		<Param xsi:type="Number">
 	        <Code>yearToProcess</Code>
@@ -22,6 +21,7 @@
                 <Min>2012</Min>
                 <Max>2013</Max>
 	    </Param>
+<!--
 		<Param xsi:type="Number">
 	        <Code>yearsForVar</Code>
 	            <Label>Years for Variance</Label>
@@ -32,8 +32,8 @@
                 <Min>3</Min>
                 <Max>10</Max>
 	    </Param>
-	</Params>
 	-->
+	</Params>
 	<Datasets>
 		<MainDataset>
 			<Code>agriculture</Code>

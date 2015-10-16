@@ -12,13 +12,13 @@
 ##' 
 
 commodity2FunctionalForm <- function(commodityCode){
-    map = fread("~/Documents/Github/faoswsFood/Data/commodityCodeMap.csv")
-    map[, commodityCode := as.character(commodityCode)]
-    commodityCode = data.table(commodityCode = commodityCode,
-                               index = 1:length(commodityCode))
-    commodityCode[, commodityCode := as.character(commodityCode)]
+    map = fread(paste0(R_SWS_SHARE_PATH, "/browningj/food/commodityCodeMap.csv"))
+    map[, fbsCode := as.character(fbsCode)]
+    fbsCode = data.table(fbsCode = getFBSCode(commodityCode),
+                         index = 1:length(commodityCode))
+    fbsCode[, fbsCode := as.character(fbsCode)]
     
-    out = merge(map, commodityCode, by = "commodityCode", all.y = TRUE)
+    out = merge(map, fbsCode, by = "fbsCode", all.y = TRUE)
     out = out[order(index), ]
-    return(list(foodDemand = out$foodDemand, foodCommodity = out$foodCommodity))
+    return(list(foodDemand = out$foodDemand, foodCommodity = out$fbsCode))
 }

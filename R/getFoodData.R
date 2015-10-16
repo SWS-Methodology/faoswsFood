@@ -3,7 +3,7 @@
 ##' This function pulls in food data from the working system given a year range.
 ##' It pulls data from two tables (FAOSTAT tables with the old food data and 
 ##' agriculture production with the new food data).  These two tables are binded
-##' together after the data from the old system is converted to use codes from
+##' together after the data from the old system is converted to use codes from 
 ##' the new system.
 ##' 
 ##' @param timePointYears A numeric vector of years for which food data is 
@@ -14,12 +14,18 @@
 ##'   updated to contain all years of timePointYears that are less than 2012. 
 ##'   This should be appropriate, as new data is now created after 2011 (at 
 ##'   least at the time of writing this function).
+##' @param newFoodCode The element code for food in the new system.
+##' @param oldFoodCode The element code for food in the old system.
+##' @param commCodesCPC The commodity codes for the SUA elements.  If NULL, all
+##'   food commodities will be pulled.  These codes should be in CPC.
+##' @param areaCodesM49 See commCodesCPC  These codes should be M49.
 ##'   
 ##' @return A data.table containing the food data.
 ##'   
 
 getFoodData = function(timePointYears, oldSystemYears = NULL,
-                       newFoodCode = "5141", oldFoodCode = "141"){
+                       newFoodCode = "5141", oldFoodCode = "141",
+                       commCodesCPC = NULL, areaCodesM49 = NULL){
     ## Data quality checks
     if(is.null(oldSystemYears)){
         oldSystemYears = timePointYears[timePointYears <= 2011]
@@ -30,51 +36,94 @@ getFoodData = function(timePointYears, oldSystemYears = NULL,
              "GetTestEnvironment?")
     }
     
-    areaCodesFS <- GetCodeList(domain = "faostat_one", dataset = "FS1_SUA_UPD",
-                               dimension = "geographicAreaFS")
-    areaCodesFS <- areaCodesFS[type == "country", code]
+    allCodesFS <- GetCodeList(domain = "faostat_one", dataset = "FS1_SUA_UPD",
+                              dimension = "geographicAreaFS")
+    if(is.null(areaCodesM49)){
+        areaCodesFS <- allCodesFS
+        areaCodesFS <- areaCodesFS[type == "country", code]
+    } else {
+        areaCodesFS <- faoswsUtil::m492fs(areaCodesM49)
+        areaCodesFS <- areaCodesFS[!is.na(areaCodesFS)]
+    }
+    areaCodesFS <- areaCodesFS[areaCodesFS %in% allCodesFS[, code]]
     dimFS <- Dimension(name = "geographicAreaFS", keys = areaCodesFS)
     dimFood <- Dimension(name = "measuredElementFS", keys = oldFoodCode)
-    suaCodes <- GetCodeList(domain = "faostat_one", dataset = "FS1_SUA_UPD",
-                            "measuredItemFS")$code
-    dimSua <- Dimension(name = "measuredItemFS", keys = suaCodes)
+    if(is.null(commCodesCPC)){
+        commCodesFCL <- GetCodeList(domain = "faostat_one", dataset = "FS1_SUA_UPD",
+                                    "measuredItemFS")$code
+    } else {
+        commCodesFCL <- faoswsUtil::cpc2fcl(commCodesCPC, returnFirst = TRUE)
+        commCodesFCL <- as.character(as.numeric(commCodesFCL))
+        commCodesFCL <- commCodesFCL[!is.na(commCodesFCL)]
+    }
+    dimSua <- Dimension(name = "measuredItemFS", keys = commCodesFCL)
     dimTime <- Dimension(name = "timePointYears",
                          keys = as.character(oldSystemYears))
     keyOld <- DatasetKey(domain = "faostat_one", dataset = "FS1_SUA_UPD",
                          dimensions = list(dimFS, dimFood, dimSua, dimTime))
-    oldData <- GetData(keyOld)
+    ## Only get data if all dimensions have keys
+    keyCount <- sapply(keyOld@dimensions, function(x){length(x@keys)})
+    if(all(keyCount > 0)){
+        oldData <- GetData(keyOld)
+        ## Convert codes of old data
+        oldData[, geographicAreaM49 :=
+                    faoswsUtil::fs2m49(as.character(geographicAreaFS))]
+        ## Mapping creates some NA M49 codes.  Remove those rows, as they don't exist in
+        ## the FBS domain.
+        oldData <- oldData[!is.na(geographicAreaM49), ]
+        oldData[, geographicAreaFS := NULL]
+        oldData[, measuredItemCPC :=
+                    faoswsUtil::fcl2cpc(formatC(as.numeric(measuredItemFS),
+                                                width = 4, flag = "0"))]
+        oldData <- oldData[!is.na(measuredItemCPC), ]
+        oldData[, measuredItemFS := NULL]
+        oldData[, flagFaostat := NULL]
+        oldData[, flagObservationStatus := NA_character_]
+        oldData[, flagMethod := NA_character_]
+        setnames(oldData, "measuredElementFS", "measuredElement")
+    } else {
+        oldData <- NULL
+    }
     
-    ## Convert codes of old data
-    oldData[, geographicAreaM49 :=
-                faoswsUtil::fs2m49(as.character(geographicAreaFS))]
-    ## Mapping creates some NA M49 codes.  Remove those rows, as they don't exist in
-    ## the FBS domain.
-    oldData <- oldData[!is.na(geographicAreaM49), ]
-    oldData[, geographicAreaFS := NULL]
-    oldData[, measuredItemCPC :=
-                faoswsUtil::fcl2cpc(formatC(measuredItemFS, width = 4, flag = "0"))]
-    oldData <- oldData[!is.na(measuredItemCPC), ]
-    oldData[, measuredItemFS := NULL]
-    oldData[, flagFaostat := NULL]
-    oldData[, flagObservationStatus := NA_character_]
-    oldData[, flagMethod := NA_character_]
-    setnames(oldData, "measuredElementFS", "measuredElement")
-    
-    areaCodesM49 <- GetCodeList(domain = "agriculture", dataset = "agriculture",
-                                dimension = "geographicAreaM49")
-    areaCodesM49 <- areaCodesM49[type == "country", code]
+    ## Convert codes for new system data
+    if(is.null(areaCodesM49)){
+        areaCodesM49 <- faoswsUtil::fs2m49(areaCodesFS)
+        areaCodesM49 <- areaCodesM49[!is.na(areaCodesM49)]
+    }
     dimM49 <- Dimension(name = "geographicAreaM49", keys = areaCodesM49)
     dimFood <- Dimension(name = "measuredElement", keys = newFoodCode)
-    cpcCodes <- GetCodeList(domain = "agriculture", dataset = "agriculture",
-                            "measuredItemCPC")$code
-    dimCPC <- Dimension(name = "measuredItemCPC", keys = cpcCodes)
+    if(is.null(commCodesCPC)){
+        commCodesCPC <- faoswsUtil::fcl2cpc(formatC(as.numeric(commCodesFCL),
+                                                    width = 4, flag = "0"))
+        commCodesCPC <- commCodesCPC[!is.na(commCodesCPC)]
+    }
+    dimCPC <- Dimension(name = "measuredItemCPC", keys = commCodesCPC)
     dimTime <- Dimension(name = "timePointYears",
                          keys = as.character(setdiff(timePointYears,
                                                      oldSystemYears)))
     keyNew <- DatasetKey(domain = "agriculture", dataset = "agriculture",
                          dimensions = list(dimM49, dimFood, dimCPC, dimTime))
-    newData <- GetData(keyNew)
+    keyCount <- sapply(keyNew@dimensions, function(x){length(x@keys)})
+    if(all(keyCount > 0)){
+        newData <- GetData(keyNew)
+    } else {
+        newData <- NULL
+    }
     
     finalData = rbind(newData, oldData)
-    return(finalData)
+    ## We want to make sure we have the same commodity/country keys for all 
+    ## years (instead of missing records).  So, perform a cartesian join.  Note:
+    ## below, "list" avoids the dropping of a data.table to a vector if there's
+    ## only one column.
+    cat("nrow of first object:", nrow(unique(finalData[, list(timePointYears)])), "\n")
+    cat("nrow of first object:", nrow(unique(finalData[, c("measuredElement", "geographicAreaM49",
+                                                "measuredItemCPC"), with = FALSE])), "\n")
+    out = merge.data.frame(unique(finalData[, list(timePointYears)]),
+                           unique(finalData[, c("measuredElement", "geographicAreaM49",
+                                                "measuredItemCPC"), with = FALSE]))
+    cat("out is a", is(out), "\n")
+    out = merge(out, finalData, by = colnames(out), all.x = TRUE)
+    out = data.table(out)
+    
+    return(out)
 }
