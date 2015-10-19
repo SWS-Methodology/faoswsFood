@@ -114,7 +114,7 @@ funcCodes <- commodity2FunctionalForm(
 foodData <- cbind(foodData, do.call("cbind", funcCodes))
 foodData[, foodDemand := as.character(foodDemand)]
 foodData[, foodCommodity := as.character(foodCommodity)]
-foodData <- foodData[!is.na(foodDemand), ]
+# foodData <- foodData[!is.na(foodDemand), ]
 cat("Food data downloaded with", nrow(foodData), "rows.\n")
 
 ## download the food dimension data (elasticities) from the SWS
@@ -152,7 +152,7 @@ data[, foodFunction := ifelse(foodFunction == 4, 3, foodFunction)]
 data[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
                                 gdp_pc = .SD$GDP/.SD$population,
                                 ## We can use the first value since they're all the same:
-                                functionalForm = .SD$foodFunction[1]),
+                                functionalForm = max(.SD$foodFunction, na.rm = TRUE)),
      by = c("measuredItemCPC", "geographicAreaM49")]
 
 # In statistics, a forecast error is the difference between the actual or real
