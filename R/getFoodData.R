@@ -116,16 +116,15 @@ getFoodData = function(timePointYears, oldSystemYears = NULL,
     
     finalData = rbind(newData, oldData)
     ## We want to make sure we have the same commodity/country keys for all 
-    ## years (instead of missing records).  So, perform a cartesian join.  Note:
-    ## below, "list" avoids the dropping of a data.table to a vector if there's
-    ## only one column.
-    cat("nrow of first object:", nrow(unique(finalData[, list(timePointYears)])), "\n")
-    cat("nrow of first object:", nrow(unique(finalData[, c("measuredElement", "geographicAreaM49",
-                                                "measuredItemCPC"), with = FALSE])), "\n")
-    out = merge.data.frame(unique(finalData[, list(timePointYears)]),
-                           unique(finalData[, c("measuredElement", "geographicAreaM49",
-                                                "measuredItemCPC"), with = FALSE]))
-    cat("out is a", is(out), "\n")
+    ## years (instead of missing records).  So, perform a cartesian join. Note: 
+    ## measuredElement must be in the same data.frame as timePointYears, as the 
+    ## element code changes from old vs. new (and old vs. new are split by 
+    ## different years).  Then, form the cartesian product of these years with
+    ## all other country-commodity pairs observed.
+    out = merge.data.frame(unique(finalData[, c("timePointYears", "measuredElement"),
+                                            with = FALSE]),
+                           unique(finalData[, c("geographicAreaM49", "measuredItemCPC"),
+                                            with = FALSE]))
     out = merge(out, finalData, by = colnames(out), all.x = TRUE)
     out = data.table(out)
     
