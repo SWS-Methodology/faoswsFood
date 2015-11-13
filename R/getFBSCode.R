@@ -27,6 +27,9 @@ getFBSCode = function(commCodeFCL){
         target_code := paste0("CPC", item)]
     setkeyv(map, "item")
     
+#     map[item == 1041, parent := 1035]
+#     map[item == 1042, parent := 1035]
+#     
     result = merge(map, commCodeFCL)
     ## Processed products won't have FBS codes.  So, assign the parent (primary 
     ## products have themselves as parents) to the item, and continue to merge
