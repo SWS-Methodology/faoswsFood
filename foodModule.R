@@ -133,6 +133,24 @@ setnames(fdmData, "Value_foodVariable_y_e", "elasticity")
 setnames(fdmData, "foodFdm", "foodDemand")
 setnames(fdmData, "foodCommodityM", "foodCommodity")
 
+## some validations
+
+popData[, list(countries = length(unique(geographicAreaM49))), 
+         by = timePointYears] # 239 countries
+
+gdpData[, list(countries = length(unique(geographicAreaM49))), 
+        by = timePointYears] # 185 countries
+
+foodData[, list(countries = length(unique(geographicAreaM49)),
+                cpcs = length(unique(measuredItemCPC)),
+                foodCommodity = length(unique(foodCommodity))), 
+         by = timePointYears] # 222 countries and 441 cpcs
+
+fdmData[, list(countries = length(unique(geographicAreaM49)),
+               foodCommodity = length(unique(foodCommodity)),
+               foodDemand = length(unique(foodDemand)),
+               foodFunctions = length(unique(foodFunction)))] # 220 countries and 441 cpcs
+
 ## Merge the datasets together, and perform some processing.
 
 cat("Merge population with GDP...\n")
@@ -175,6 +193,11 @@ data[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
 # By convention, the error is defined using the value of the outcome minus the
 # value of the forecast.
 data[, error := food - foodHat]
+
+# summaries
+data[, list(countries = length(unique(geographicAreaM49))), 
+        by = timePointYears] # 241 countries
+
 
 # Geographic Area, measuredElement = 141, measuredItem = SUA item code, Dist
 # Param = log(Mu) or log(Sigma), Year = Year
