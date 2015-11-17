@@ -14,7 +14,7 @@
 commodity2FunctionalForm <- function(commodityCode){
     map = fread(paste0(R_SWS_SHARE_PATH, "/browningj/food/commodityCodeMap.csv"))
     map[, fbsCode := as.character(fbsCode)]
-    fbsCode = data.table(fbsCode = getFBSCode(commodityCode),
+    fbsCode = data.table(fbsCode = faoswsUtil::getFBSCode(commodityCode),
                          index = 1:length(commodityCode))
     fbsCode[, fbsCode := as.character(fbsCode)]
     
