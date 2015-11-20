@@ -11,6 +11,16 @@ URL: https://github.com/SWS-Methodology/faoswsFood
 License: GPL (>= 3)
 Depends:
 	faosws
+swsDatasetDepends:
+    faostat_one:FS1_SUA_UPD,
+    food:food_factors,
+    agriculture:agriculture,
+    population:population,
+    WorldBank:wb_ecogrw,
+    fcl_2_cpc,
+    fal_2_m49,
+    extraction_rates
+swsModuleDepends:
 LazyData: yes
 ZipData: no
 VignetteBuilder: knitr
