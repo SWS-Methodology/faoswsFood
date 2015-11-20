@@ -12,6 +12,11 @@
 ##' 
 
 commodity2FunctionalForm <- function(commodityCode){
+    ## Data Quality Checks
+    if(length(commodityCode) == 0){
+        return(list(foodDemand = c(), foodCommodity = c()))
+    }
+    
     map = fread(paste0(R_SWS_SHARE_PATH, "/browningj/food/commodityCodeMap.csv"))
     map[, fbsCode := as.character(fbsCode)]
     fbsCode = data.table(fbsCode = getFBSCode(commodityCode),
