@@ -15,17 +15,27 @@ DEBUG_MODE <- Sys.getenv("R_DEBUG_MODE")
 overwritableFlags = c("M", "I")
 
 if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
-    SetClientFiles(dir = "~/R certificate files/QA/")
-    GetTestEnvironment(
-        baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
-        token = "01128565-cebb-430b-949c-4d0fad32da02"
-        )
-    R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
     if(Sys.info()[7] == "josh"){ # Josh's work computer
-        files = dir("~/Documents/Github/faoswsFood/R",
-                    full.names = TRUE)
-    }
-    sapply(files, source)
+      #R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
+      SetClientFiles(dir = "~/R certificate files/QA/")
+      files = dir("~/Documents/Github/faoswsFood/R",
+                  full.names = TRUE)
+      token = "b42c86bc-ee6c-418c-9741-6747786e9bc1"
+    } else if(Sys.info()[7] == "caetano"){ # bruno's work computer
+      SetClientFiles(dir = "~/.R/QA/")
+      R_SWS_SHARE_PATH = "//hqlprsws1.hq.un.fao.org/sws_r_share"
+      files = dir("~/Github/faoswsFood/R", full.names = TRUE)
+      token = "66a36f31-1a29-4a49-8626-ae62117c251a"
+    } else {
+      stop("User not yet implemented!")
+    }  
+  
+  GetTestEnvironment(
+    baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
+    token = token
+  )
+  #R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
+  sapply(files, source)
 }
 
 if(swsContext.computationParams$yearToProcess <= 2011)
@@ -150,6 +160,24 @@ if(nrow(fdmData) == 0){
     fdmData[, foodDemand := as.character(foodDemand)]
     fdmData[, foodFunction := as.character(foodFunction)]
 }
+
+## some validations
+
+popData[, list(countries = length(unique(geographicAreaM49))), 
+         by = timePointYears] # 239 countries
+
+gdpData[, list(countries = length(unique(geographicAreaM49))), 
+        by = timePointYears] # 185 countries
+
+foodData[, list(countries = length(unique(geographicAreaM49)),
+                cpcs = length(unique(measuredItemCPC)),
+                foodCommodity = length(unique(foodCommodity))), 
+         by = timePointYears] # 222 countries and 441 cpcs
+
+fdmData[, list(countries = length(unique(geographicAreaM49)),
+               foodCommodity = length(unique(foodCommodity)),
+               foodDemand = length(unique(foodDemand)),
+               foodFunctions = length(unique(foodFunction)))] # 220 countries and 441 cpcs
 
 ## Merge the datasets together, and perform some processing.
 
