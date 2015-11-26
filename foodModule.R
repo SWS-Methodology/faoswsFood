@@ -161,6 +161,20 @@ if(nrow(fdmData) == 0){
     fdmData[, foodFunction := as.character(foodFunction)]
 }
 
+# read map table from old code to new code
+oldToNewCommodity = fread("Data/oldToNewCommodity.csv", 
+                          colClasses=c("character", "character"))
+
+fdmData <- merge(fdmData, oldToNewCommodity, all.x = T, allow.cartesian = T, 
+                 by.x="foodCommodity", by.y = "oldFoodCommodity")
+fdmData[is.na(newFoodCommodity), newFoodCommodity := foodCommodity]
+fdmData <- fdmData[foodCommodity != "2500"]
+fdmData[, c("foodCommodity") := NULL]
+setnames(fdmData, old=c("newFoodCommodity"), new=c("foodCommodity"))
+
+fdmData <- fdmData[, list(elasticity = max(elasticity)), 
+                   by=list(geographicAreaM49, foodDemand, foodFunction)]
+
 ## some validations
 
 popData[, list(countries = length(unique(geographicAreaM49))), 
@@ -193,7 +207,7 @@ data = merge(foodData, data, all.x = TRUE,
 
 cat("Merge in food demand model data...\n")
 data <- merge(data, fdmData,
-              by = c("foodCommodity","foodDemand", "geographicAreaM49"),
+              by = c("foodDemand", "geographicAreaM49"),
               all.x = TRUE)
 
 if(nrow(data) == 0){
