@@ -162,7 +162,8 @@ if(nrow(fdmData) == 0){
 }
 
 # read map table from old code to new code
-oldToNewCommodity = fread("Data/oldToNewCommodity.csv", 
+oldToNewCommodity = fread(paste0(R_SWS_SHARE_PATH,
+                                 "/browningj/food/oldToNewCommodity.csv"),
                           colClasses=c("character", "character"))
 
 fdmData <- merge(fdmData, oldToNewCommodity, all.x = T, allow.cartesian = T, 
@@ -188,10 +189,10 @@ foodData[, list(countries = length(unique(geographicAreaM49)),
                 foodCommodity = length(unique(foodCommodity))), 
          by = timePointYears] # 222 countries and 441 cpcs
 
-fdmData[, list(countries = length(unique(geographicAreaM49)),
-               foodCommodity = length(unique(foodCommodity)),
-               foodDemand = length(unique(foodDemand)),
-               foodFunctions = length(unique(foodFunction)))] # 220 countries and 441 cpcs
+# fdmData[, list(countries = length(unique(geographicAreaM49)),
+#                foodCommodity = length(unique(foodCommodity)),
+#                foodDemand = length(unique(foodDemand)),
+#                foodFunctions = length(unique(foodFunction)))] # 220 countries and 441 cpcs
 
 ## Merge the datasets together, and perform some processing.
 
