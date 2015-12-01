@@ -294,7 +294,7 @@ if(nrow(data) == 0){
     
     cat("Save the final data...\n")
     
-    stats = SaveData(domain = "agriculture", dataset = "agriculture", data = dataToSave)
+    stats = SaveData(domain = "agriculture", dataset = "aproduction", data = dataToSave)
 }
 
 paste0(stats$inserted, " observations written, ",
