@@ -18,6 +18,7 @@ commodity2FunctionalForm <- function(commodityCode){
     }
     
     map = ReadDatatable("commodity_code_map")
+    setnames(map, "fbs_code", "fbsCode")
     map[, fbsCode := as.character(fbsCode)]
     fbsCode = data.table(fbsCode = faoswsUtil::getFBSCode(commodityCode),
                          index = 1:length(commodityCode))
