@@ -16,11 +16,11 @@ overwritableFlags = c("M", "I")
 
 if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
     if(Sys.info()[7] == "josh"){ # Josh's work computer
-      #R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
+      R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
       SetClientFiles(dir = "~/R certificate files/QA/")
       files = dir("~/Documents/Github/faoswsFood/R",
                   full.names = TRUE)
-      token = "b42c86bc-ee6c-418c-9741-6747786e9bc1"
+      token = "557f0e65-5f84-43b0-a021-fe3bf3f02316"
     } else if(Sys.info()[7] == "caetano"){ # bruno's work computer
       SetClientFiles(dir = "~/.R/QA/")
       R_SWS_SHARE_PATH = "//hqlprsws1.hq.un.fao.org/sws_r_share"

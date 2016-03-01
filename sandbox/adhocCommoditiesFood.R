@@ -1,4 +1,3 @@
-
 library(data.table)
 library(faosws)
 library(dplyr)
@@ -56,6 +55,8 @@ key = DatasetKey(domain = "faostat_one", dataset = "FS1_SUA_UPD", dimensions = l
   Dimension(name = "measuredItemFS", keys = GetCodeList("faostat_one", "FS1_SUA_UPD", "measuredItemFS")[, code]))
 )
 data = GetData(key)
+initialData = copy(data)
+
 data <- dcast.data.table(data,
                          geographicAreaFS + measuredItemFS + timePointYears ~ measuredElementFS,
                          value.var = "Value")
@@ -83,8 +84,6 @@ data[, foodByImports := food/imports]
 data[, foodByProcessingFood := food/(processed + food)]
 data[, foodBySupply := food/(production + imports - exports + stockVariation)]
 data[, foodBySupply2 := food/(production + imports - exports)]
-
-
 
 data[foodBySupply > 0]
 
@@ -141,42 +140,27 @@ statsCPC = data[, list(foodByProduction = median(foodByProduction, na.rm = TRUE)
 
 library(rpart)
 treeModel = rpart(foodBySupply ~ measuredItemCPC, data = data[!is.na(foodBySupply), ])
-names(treeModel)
 usedCPCcodes = unique(data[!is.na(foodBySupply), measuredItemCPC])
 predsWithLevel = commodityLevel[measuredItemCPC %in% usedCPCcodes, ]
+missingCodes = usedCPCcodes[!(usedCPCcodes %in% predsWithLevel$measuredItemCPC)]
+predsWithLevel = rbind(predsWithLevel, data.table(measuredItemCPC = missingCodes, level = NA))
 predsWithLevel$predictions = predict(treeModel, newdata = predsWithLevel)
 predsWithLevel[, fcl := cpc2fcl(measuredItemCPC, returnFirst = TRUE)]
+predsWithLevel[, consumable := predictions > 0.5]
 
-predsWithLevel[substring(measuredItemCPC, 1, 3) == "215", ][order(predictions)]
-data[, prodSmallPosTrade := exports < imports & production / imports < .1]
-data[, productionByNetTrade := production / (exports - imports)]
-
-
-data[, foodByTrade := food/abs(imports - exports)]
-library(ggplot2)
-foodCPCCodes = predsWithLevel[predictions > .5, measuredItemCPC]
-subData = data[measuredItemCPC %in% foodCPCCodes, ]
-qplot(subData[, foodByTrade], binwidth = .1) + scale_x_log10(breaks = 10^(-3:5))
-
-subData[, foodByTradeLog := log(foodByTrade)]
-
-treeModel2 = rpart(foodByTradeLog ~ measuredItemCPC,
-                   data = subData[abs(foodByTradeLog) < Inf &
-                                 !is.na(foodByTradeLog) &
-                               level != 0, ])
-#                   control = rpart.control(cp = 0.001))
-library(rpart.plot)
-prp(treeModel2, type = 1)
-
-quantile(subData$foodByTradeLog[abs(subData$foodByTradeLog) < Inf &
-                                  subData$level != 0],
-         na.rm = TRUE, probs = 0:39/40)
-fit = kmeans(subData[!is.na(foodByTradeLog) & abs(foodByTradeLog) < Inf & level != 0,
-                     foodByTradeLog], centers = 4, nstart = 10)
-fit$centers
-fit = lm(foodByTradeLog ~ measuredItemCPC,
-         data = subData[!is.na(foodByTradeLog) & abs(foodByTradeLog) < Inf &
-                          level != 0, ])
-summary(fit)
-
-
+# filter data to main countries to avoid errors from too little data
+d = initialData[!(Value == 0 & flagFaostat == "M"), ]
+filter = d[, length(unique(.SD$measuredItemFS)) <= 60, by = c("geographicAreaFS")]
+filter = filter[!(V1), geographicAreaFS]
+d = d[geographicAreaFS %in% filter, ]
+mainFoods = d[, findMainConsumption(tree = tree, suaData = .SD, threshold1 = .6),
+                 by = c("geographicAreaFS", "timePointYears")]
+summaryData = mainFoods[, mean(mainFoodFlag), by = measuredItemFS][order(V1), ]
+setnames(summaryData, "V1", "mainFoodPct")
+predsWithLevel[, fcl := as.numeric(fcl)]
+predsWithLevel = merge(predsWithLevel, summaryData, by.x = "fcl",
+                       by.y = "measuredItemFS", all = TRUE)
+predsWithLevel[, mainFood := consumable & mainFoodPct > 0.5]
+predsWithLevel
+write.csv(predsWithLevel, file = "~/Documents/Github/faoswsFood/Data/food_classification.csv",
+          row.names = FALSE)
