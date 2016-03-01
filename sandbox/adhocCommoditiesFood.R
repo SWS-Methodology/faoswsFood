@@ -2,6 +2,7 @@ library(data.table)
 library(faosws)
 library(dplyr)
 library(faoswsUtil)
+library(xlsx)
 #library(reshape2)
 
 ## To do:
@@ -164,3 +165,18 @@ predsWithLevel[, mainFood := consumable & mainFoodPct > 0.5]
 predsWithLevel
 write.csv(predsWithLevel, file = "~/Documents/Github/faoswsFood/Data/food_classification.csv",
           row.names = FALSE)
+
+
+## preparing data for Veronica's checking
+
+setwd("C:/Users/caetano/Documents/Github/faoswsFood/Data")
+foodClassification <- fread("food_classification.csv")
+foodClassification <- nameData("agriculture", "aproduction", foodClassification)
+
+foodClassification[predictions > 0.5 & mainFoodPct >= 0.5,  foodGroup := "Consumable, main"]
+foodClassification[predictions > 0.5 & mainFoodPct < 0.5,  foodGroup := "Consumable, residual"]
+foodClassification[predictions < 0.5,  foodGroup := "Non-consumable"]
+foodClassification[, c("fcl", "level", "predictions", "consumable", "mainFoodPct", "mainFood") := NULL]
+setnames(foodClassification, "measuredItemCPC_description", "description")
+
+write.xlsx(foodClassification, "food_group.xlsx", row.names = F)
