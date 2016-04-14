@@ -162,9 +162,7 @@ if(nrow(fdmData) == 0){
 }
 
 # read map table from old code to new code
-oldToNewCommodity = fread(paste0(R_SWS_SHARE_PATH,
-                                 "/browningj/food/oldToNewCommodity.csv"),
-                          colClasses=c("character", "character"))
+oldToNewCommodity = ReadDatatable("food_old_code_map")
 
 fdmData <- merge(fdmData, oldToNewCommodity, all.x = T, allow.cartesian = T, 
                  by.x="foodCommodity", by.y = "oldFoodCommodity")
