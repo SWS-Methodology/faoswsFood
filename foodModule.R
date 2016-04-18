@@ -129,6 +129,14 @@ if(nrow(gdpData) == 0){
 foodData <- getFoodData(timePointYears = yearCodes, areaCodesM49 = areaCodesM49,
                         commCodesCPC = swsContext.datasets[[1]]@dimensions$measuredItemCPC@keys)
 setnames(foodData, "Value", "food")
+
+## Select only the commodities that should have figures in the food module
+foodClassification = fread(paste0(R_SWS_SHARE_PATH, "/caetano/food/food_classification.csv"))
+#foodClassification =  fread("Data/food_classification.csv")
+foodComodity = foodClassification[consumable == "TRUE" & mainFood == "TRUE", 
+                                  measuredItemCPC]
+foodData = foodData[measuredItemCPC %in% foodComodity]
+
 if(nrow(foodData) > 0){
     funcCodes <- commodity2FunctionalForm(
         as.numeric(cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE)))
@@ -165,11 +173,11 @@ if(nrow(fdmData) == 0){
 oldToNewCommodity = ReadDatatable("food_old_code_map")
 
 fdmData <- merge(fdmData, oldToNewCommodity, all.x = T, allow.cartesian = T, 
-                 by.x="foodCommodity", by.y = "oldFoodCommodity")
-fdmData[is.na(newFoodCommodity), newFoodCommodity := foodCommodity]
+                 by.x="foodCommodity", by.y = "old_code")
+fdmData[is.na(new_code), new_code := foodCommodity]
 fdmData <- fdmData[foodCommodity != "2500"]
 fdmData[, c("foodCommodity") := NULL]
-setnames(fdmData, old=c("newFoodCommodity"), new=c("foodCommodity"))
+setnames(fdmData, old=c("new_code"), new=c("foodCommodity"))
 
 fdmData <- fdmData[, list(elasticity = max(elasticity)), 
                    by=list(geographicAreaM49, foodDemand, foodFunction)]
