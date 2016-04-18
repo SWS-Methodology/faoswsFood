@@ -107,7 +107,7 @@ SharesKey = DatasetKey(domain = "agriculture", dataset = "aupus_share", dimensio
 sharesData = GetData(SharesKey)
 
 # levels of commodities
-commodityLevel <- getCommodityLevel(commodityTree=sharesData, parentColname ='measuredItemParentCPC', 
+commodityLevel <- faoswsUtil:::getCommodityLevel(commodityTree=sharesData, parentColname ='measuredItemParentCPC', 
                                     childColname='measuredItemChildCPC')
 
 commodityLevel[, .N, node]
