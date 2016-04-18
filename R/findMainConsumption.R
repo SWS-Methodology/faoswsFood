@@ -69,7 +69,7 @@ findMainConsumption = function(tree, suaData, threshold1 = 0.8, threshold2 = 0.2
   suaData[, measuredItemFS := as.numeric(measuredItemFS)]
   
   ## Find levels so we can start at all parents and iterate down
-  levels = getCommodityLevel(tree, parentColname = "measuredItemParentFS",
+  levels = faoswsUtil:::getCommodityLevel(tree, parentColname = "measuredItemParentFS",
                              childColname = "measuredItemChildFS")
   topNodes = levels[level == 0, unique(node)]
   
@@ -114,7 +114,7 @@ findMainConsumption = function(tree, suaData, threshold1 = 0.8, threshold2 = 0.2
   out[measuredItemFS %in% selected, mainFoodFlag := TRUE]
   ## For all the commodities not seleceted, look at all their descendants.
   notSelected = setdiff(candidates, selected)
-  newCandidates = getDescendants(tree = tree, parentColname = "measuredItemParentFS",
+  newCandidates = faoswsUtil:::getDescendants(tree = tree, parentColname = "measuredItemParentFS",
                                  childColname = "measuredItemChildFS")
   newCandidates = newCandidates[measuredItemParentFS %in% notSelected,
                                 unique(measuredItemChildFS)]
