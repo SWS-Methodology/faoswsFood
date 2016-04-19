@@ -1,19 +1,22 @@
 Package: faoswsFood
 Type: Package
-Title: Package to perform the computation of food consumption FAO food balance sheets.
+Title: Package to perform the computation of food consumption FAO food balance
+    sheets.
 Version: 0.0.1
 Date: 2015-10-09
 Authors@R: c(person("Joshua", "Browning", role = c("aut", "cre"), email = "joshua.browning@fao.org"))
-Author: Joshua Browning <joshua.browning@fao.org>, Natalia Golini <natalia.golini@fao.org>
+Author: Joshua Browning <joshua.browning@fao.org>, Natalia Golini
+    <natalia.golini@fao.org>
 Maintainer: Joshua Browning <joshua.browning@fao.org>
-Description: This package provides all the functions to perform computation of food consumption for the FAO food balance sheets.
+Description: This package provides all the functions to perform computation of
+    food consumption for the FAO food balance sheets.
 URL: https://github.com/SWS-Methodology/faoswsFood
 License: GPL (>= 3)
 Depends:
-	faosws
-Imports: faoswsUtil
-swsDatasetDepends:
-    faostat_one:FS1_SUA_UPD,
+    faosws
+Imports:
+    faoswsUtil
+swsDatasetDepends: faostat_one:FS1_SUA_UPD,
     food:food_factors,
     agriculture:agriculture,
     population:population,
@@ -21,8 +24,11 @@ swsDatasetDepends:
     fcl_2_cpc,
     fal_2_m49,
     extraction_rates
-swsModuleDepends:
+swsModuleDepends: 
 LazyData: yes
 ZipData: no
 VignetteBuilder: knitr
-Suggests: knitr, ggplot2
+Suggests:
+    knitr,
+    ggplot2
+RoxygenNote: 5.0.1
