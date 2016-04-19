@@ -12,6 +12,8 @@
 ##'   
 ##' @return An estimate for the food consumption in year t1.
 ##' 
+##' @export
+##' 
 
 linear <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1){
     food_t0

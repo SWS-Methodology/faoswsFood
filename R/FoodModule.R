@@ -8,6 +8,8 @@
 ##' 
 ##' @return
 ##' 
+##' @export
+##' 
 
 FoodModule <- function(data){
   

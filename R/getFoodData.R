@@ -22,6 +22,8 @@
 ##'   
 ##' @return A data.table containing the food data.
 ##'   
+##' @export
+##' 
 
 getFoodData = function(timePointYears, oldSystemYears = NULL,
                        newFoodCode = "5141", oldFoodCode = "141",

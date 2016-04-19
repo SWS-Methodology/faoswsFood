@@ -9,6 +9,8 @@
 ##'   
 ##' @return A numeric vector of the estimated food consumption.
 ##' 
+##' @export
+##' 
 
 calculateFood <- function(food, elas, gdp_pc, functionalForm){
     ## Data Quality Checks

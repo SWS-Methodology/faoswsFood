@@ -10,6 +10,8 @@
 ##' @return A list with two objects: a vector of the corresponding food demand 
 ##'   codes and a vector of the corresponding food commodity codes.
 ##' 
+##' @export
+##' 
 
 commodity2FunctionalForm <- function(commodityCode){
     ## Data Quality Checks
