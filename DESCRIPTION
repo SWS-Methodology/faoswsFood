@@ -6,8 +6,8 @@ Version: 0.0.1
 Date: 2015-10-09
 Authors@R: c(person("Joshua", "Browning", role = c("aut", "cre"), email = "joshua.browning@fao.org"))
 Author: Joshua Browning <joshua.browning@fao.org>, Natalia Golini
-    <natalia.golini@fao.org>
-Maintainer: Joshua Browning <joshua.browning@fao.org>
+    <natalia.golini@fao.org>, Bruno Caetano Vidigal <bruno.caetanovidigal@fao.org>
+Maintainer: Bruno Caetano Vidigal <bruno.caetanovidigal@fao.org>
 Description: This package provides all the functions to perform computation of
     food consumption for the FAO food balance sheets.
 URL: https://github.com/SWS-Methodology/faoswsFood
