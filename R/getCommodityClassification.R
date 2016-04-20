@@ -14,6 +14,8 @@
 ##' getCommodityClassification(c("0111", "23110", "F0020"))
 ##' }
 ##' 
+##' @import data.table
+##' 
 ##' @export
 ##'
 
