@@ -3,6 +3,6 @@
 export(FoodModule)
 export(calculateFood)
 export(commodity2FunctionalForm)
-export(findMainConsumption)
+export(getCommodityClassification)
 export(getFoodData)
 export(linear)
