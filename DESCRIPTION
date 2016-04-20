@@ -13,7 +13,8 @@ Description: This package provides all the functions to perform computation of
 URL: https://github.com/SWS-Methodology/faoswsFood
 License: GPL (>= 3)
 Depends:
-    faosws
+    faosws, 
+	data.table
 Imports:
     faoswsUtil
 swsDatasetDepends: faostat_one:FS1_SUA_UPD,
