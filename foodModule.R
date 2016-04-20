@@ -130,12 +130,12 @@ foodData <- getFoodData(timePointYears = yearCodes, areaCodesM49 = areaCodesM49,
                         commCodesCPC = swsContext.datasets[[1]]@dimensions$measuredItemCPC@keys)
 setnames(foodData, "Value", "food")
 
-## Select only the commodities that should have figures in the food module
-foodClassification = fread(paste0(R_SWS_SHARE_PATH, "/caetano/food/food_classification.csv"))
-#foodClassification =  fread("Data/food_classification.csv")
-foodComodity = foodClassification[consumable == "TRUE" & mainFood == "TRUE", 
-                                  measuredItemCPC]
-foodData = foodData[measuredItemCPC %in% foodComodity]
+## Get the food classification for each commodity and select only the 
+## commodities that should have figures in the food module. In this case we'll
+## use just commodities with the food classification "Consumable, main".
+foodData[, type := getCommodityClassification(measuredItemCPC)]
+foodData = foodData[type == "Consumable, main"]
+foodData[, type := NULL]
 
 if(nrow(foodData) > 0){
     funcCodes <- commodity2FunctionalForm(
