@@ -13,14 +13,15 @@ getCommodityClassification(cpcCodes)
 A character vector whose ith element is the food classification
  corresponding to the passed CPC code in position i. If no valid cpc code is 
  found, an NA is returned in this place.
-
-##' @examples
-\dontrun{
-getCommodityClassification(c("0111", "23110", "F0020"))
-}
 }
 \description{
 This function classifies the cpc code in "Consumable, main", "Non-Consumable"
 or "Consumable, residual".
+}
+\examples{
+\dontrun{
+getCommodityClassification(c("0111", "23110", "F0020"))
+}
+
 }
 
