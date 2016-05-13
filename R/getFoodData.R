@@ -103,7 +103,7 @@ getFoodData = function(timePointYears, oldSystemYears = NULL,
     dimTime <- Dimension(name = "timePointYears",
                          keys = as.character(setdiff(timePointYears,
                                                      oldSystemYears)))
-    keyNew <- DatasetKey(domain = "agriculture", dataset = "agriculture",
+    keyNew <- DatasetKey(domain = "agriculture", dataset = "aproduction",
                          dimensions = list(dimM49, dimFood, dimCPC, dimTime))
     keyCount <- sapply(keyNew@dimensions, function(x){length(x@keys)})
     if(all(keyCount > 0)){
