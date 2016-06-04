@@ -3,3 +3,12 @@
 .RData
 *.zip
 Adhoc Test
+
+#Binary files
+*.pdf
+*.jar
+*.png
+
+# Output files
+*.csv
+*.zip
