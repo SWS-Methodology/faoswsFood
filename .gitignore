@@ -12,3 +12,4 @@ Adhoc Test
 # Output files
 *.csv
 *.zip
+modules/impute_food/sws.yml

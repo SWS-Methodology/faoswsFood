@@ -14,29 +14,26 @@ R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
 DEBUG_MODE <- Sys.getenv("R_DEBUG_MODE")
 overwritableFlags = c("M", "I")
 
-if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
-    if(Sys.info()[7] == "josh"){ # Josh's work computer
-      R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
-      SetClientFiles(dir = "~/R certificate files/QA/")
-      files = dir("~/Documents/Github/faoswsFood/R",
-                  full.names = TRUE)
-      token = "557f0e65-5f84-43b0-a021-fe3bf3f02316"
-    } else if(Sys.info()[7] == "caetano"){ # bruno's work computer
-      SetClientFiles(dir = "~/.R/QA/")
-      R_SWS_SHARE_PATH = "//hqlprsws1.hq.un.fao.org/sws_r_share"
-      files = dir("~/Github/faoswsFood/R", full.names = TRUE)
-      #token = "66a36f31-1a29-4a49-8626-ae62117c251a"
-      token = "b4d57573-7cbd-46bd-94b0-a4b10f6e7d66"
-    } else {
-      stop("User not yet implemented!")
-    }  
-  
-  GetTestEnvironment(
-    baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
-    token = token
-  )
-  #R_SWS_SHARE_PATH <- "/media/hqlprsws1_qa/"
-  sapply(files, source)
+# This return FALSE if on the Statistical Working System
+if(CheckDebug()){
+    
+    message("Not on server, so setting up environment...")
+    
+    library(faoswsModules)
+    SETTINGS <- ReadSettings("modules/impute_food/sws.yml")
+    
+    # If you're not on the system, your settings will overwrite any others
+    R_SWS_SHARE_PATH <- SETTINGS[["share"]]
+    
+    # Define where your certificates are stored
+    SetClientFiles(SETTINGS[["certdir"]])
+    
+    # Get session information from SWS. Token must be obtained from web interface
+    GetTestEnvironment(baseUrl = SETTINGS[["server"]],
+                       token = SETTINGS[["token"]])
+    files = dir("~/Github/faoswsFood/R", full.names = TRUE)
+    sapply(files, source)
+    
 }
 
 if(swsContext.computationParams$yearToProcess <= 1997)
