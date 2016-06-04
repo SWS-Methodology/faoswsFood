@@ -25,7 +25,8 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
       SetClientFiles(dir = "~/.R/QA/")
       R_SWS_SHARE_PATH = "//hqlprsws1.hq.un.fao.org/sws_r_share"
       files = dir("~/Github/faoswsFood/R", full.names = TRUE)
-      token = "66a36f31-1a29-4a49-8626-ae62117c251a"
+      #token = "66a36f31-1a29-4a49-8626-ae62117c251a"
+      token = "b4d57573-7cbd-46bd-94b0-a4b10f6e7d66"
     } else {
       stop("User not yet implemented!")
     }  
@@ -38,7 +39,7 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == "") {
   sapply(files, source)
 }
 
-if(swsContext.computationParams$yearToProcess <= 2011)
+if(swsContext.computationParams$yearToProcess <= 1997)
     stop("This module was designed for imputation on years after 2011 only!")
 
 cat("Defining variables/dimensions/keys/...\n")
@@ -57,7 +58,7 @@ yearsForSD <- as.numeric(swsContext.datasets[[1]]@dimensions$timePointYears@keys
 # yearCodes <- swsContext.datasets[[1]]@dimensions$timePointYears@keys
 ## We need the previous year to compute change in GDP.  This allows us to
 ## calculate food in the new year.
-yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) - 1:0
+yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) + 0:16
 yearCodes <- as.character(yearCodes)
 ## GDP per capita (constant 2500 US$) is under this key
 gdpCodes <- "NY.GDP.PCAP.KD"
@@ -132,9 +133,11 @@ setnames(foodData, "Value", "food")
 
 ## Get the food classification for each commodity and select only the 
 ## commodities that should have figures in the food module. In this case we'll
-## use just commodities with the food classification "Consumable, main".
+## use just commodities with the food classification "Food Estimate". For the 
+## commodities classified as a "Food residual", we need to check if there is
+## net trade for them.
 foodData[, type := getCommodityClassification(measuredItemCPC)]
-foodData = foodData[type == "Consumable, main"]
+foodData = foodData[type == "Food Estimate"]
 foodData[, type := NULL]
 
 if(nrow(foodData) > 0){
@@ -258,7 +261,7 @@ if(nrow(data) == 0){
     #          var = mean(error^2, na.rm = TRUE),
     #          timePointYears = max(timePointYears)),
     #     by = c("geographicAreaM49", "measuredElement", "measuredItemCPC")]
-    dataToSave <- data[timePointYears == swsContext.computationParams$yearToProcess, ]
+    dataToSave <- data[timePointYears > swsContext.computationParams$yearToProcess, ]
     
     ## To convert from mu/sigma to logmu/logsigma, we can use the method of moments
     ## estimators (which express the parameters of the log-normal distribution in

@@ -18,8 +18,8 @@
 			    Please specify which year the food module should be ran for.
 		        </Description>
 		        <Compulsory>true</Compulsory>
-                <Min>2012</Min>
-                <Max>2013</Max>
+                <Min>1998</Min>
+                <Max>2014</Max>
 	    </Param>
 <!--
 		<Param xsi:type="Number">
