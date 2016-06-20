@@ -15,18 +15,22 @@
 ##' @export
 ##' 
 
-linear <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1){
-    food_t0
+linear <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+    #food_t0
+    (pop_t1/pop_t0) * (1 + trend_factor) * food_t0
 }
 
-logLog <- function(food_t0,elas,gdp_pc_t0,gdp_pc_t1){
-    food_t0 + exp(elas*log(gdp_pc_t1/gdp_pc_t0))
+logLog <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+    #food_t0 + exp(elas*log(gdp_pc_t1/gdp_pc_t0))
+    (pop_t1/pop_t0) * (1 + trend_factor) * food_t0 + pop_t1 * exp(elas * log(gdp_pc_t1/gdp_pc_t0))
 }
   
-semiLog <- function(food_t0,elas,gdp_pc_t0,gdp_pc_t1){
-    food_t0+food_t0*elas*log(gdp_pc_t1/gdp_pc_t0)
+semiLog <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+    #food_t0+food_t0*elas*log(gdp_pc_t1/gdp_pc_t0)
+    (pop_t1/pop_t0) * food_t0 * (1 + elas * log(gdp_pc_t1/gdp_pc_t0) + trend_factor)
 }
   
-logInverse <- function(food_t0,elas,gdp_pc_t0,gdp_pc_t1){
-    food_t0 *(exp(elas*(1-1/(gdp_pc_t1/gdp_pc_t0))))
+logInverse <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+    #food_t0 *(exp(elas*(1-1/(gdp_pc_t1/gdp_pc_t0))))
+    (pop_t1/pop_t0) * food_t0 * (exp(elas*(1-1/(gdp_pc_t1/gdp_pc_t0))) + trend_factor)
 }

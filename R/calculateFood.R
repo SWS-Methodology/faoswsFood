@@ -12,10 +12,11 @@
 ##' @export
 ##' 
 
-calculateFood <- function(food, elas, gdp_pc, functionalForm){
+calculateFood <- function(food, elas, gdp_pc, functionalForm, pop, trend_factor){
     ## Data Quality Checks
     stopifnot(length(food) == length(elas))
     stopifnot(length(food) == length(gdp_pc))
+    stopifnot(length(food) == length(pop))
     
     ## 0, 1, 2 and 3 are the functional forms linking the human food consumption
     ## and GDP.
@@ -44,7 +45,9 @@ calculateFood <- function(food, elas, gdp_pc, functionalForm){
     ## gdp_pc_t1 should be the same as gdp_pc but offset by 1 (i.e. one year
     ## ahead).
     N = length(gdp_pc)
-    gdp_pc_t1 = c(NA, gdp_pc[-N])
-    func(food_t0 = c(NA, food[-N]), elas = elas, gdp_pc_t0 = gdp_pc,
-         gdp_pc_t1 = gdp_pc_t1)
+    gdp_pc_t0 = c(NA, gdp_pc[-N])
+    pop_t0 = c(NA, pop[-N])
+    func(food_t0 = c(NA, food[-N]), elas = elas, gdp_pc_t1 = gdp_pc,
+         gdp_pc_t0 = gdp_pc_t0, pop_t1 = pop, pop_t0 = pop_t0, 
+         trend_factor = trend_factor)
 }

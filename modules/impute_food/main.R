@@ -37,7 +37,7 @@ if(CheckDebug()){
 }
 
 if(swsContext.computationParams$yearToProcess <= 1997)
-    stop("This module was designed for imputation on years after 2011 only!")
+    stop("This module was designed for imputation on years after 1998 only!")
 
 cat("Defining variables/dimensions/keys/...\n")
 
@@ -134,8 +134,7 @@ setnames(foodData, "Value", "food")
 ## commodities classified as a "Food residual", we need to check if there is
 ## net trade for them.
 foodData[, type := getCommodityClassification(measuredItemCPC)]
-foodData = foodData[type == "Food Estimate"]
-foodData[, type := NULL]
+foodData = foodData[type %in% c("Food Estimate", "Food residual", "Food Residual")]
 
 if(nrow(foodData) > 0){
     funcCodes <- commodity2FunctionalForm(
@@ -161,13 +160,7 @@ fdmData <- GetData(keyFdm, flags=FALSE, normalized = FALSE)
 setnames(fdmData, "Value_foodVariable_y_e", "elasticity")
 setnames(fdmData, "foodFdm", "foodDemand")
 setnames(fdmData, "foodCommodityM", "foodCommodity")
-if(nrow(fdmData) == 0){
-    warning("Hot fix until SWS-1166 is resolved")
-    fdmData[, geographicAreaM49 := as.character(geographicAreaM49)]
-    fdmData[, foodCommodity := as.character(foodCommodity)]
-    fdmData[, foodDemand := as.character(foodDemand)]
-    fdmData[, foodFunction := as.character(foodFunction)]
-}
+
 
 # read map table from old code to new code
 oldToNewCommodity = ReadDatatable("food_old_code_map")
@@ -181,6 +174,39 @@ setnames(fdmData, old=c("new_code"), new=c("foodCommodity"))
 
 fdmData <- fdmData[, list(elasticity = max(elasticity)), 
                    by=list(geographicAreaM49, foodDemand, foodFunction)]
+
+## Trade
+
+tradeCode <- c("5610", "5910")
+
+totalTradeKey = DatasetKey(
+    domain = "trade",
+    dataset = "total_trade_cpc_m49",
+    dimensions = list(
+        Dimension(
+            name = "geographicAreaM49",
+            keys = GetCodeList("trade", "total_trade_cpc_m49", "geographicAreaM49")[, code]
+        ),
+        Dimension(name = "measuredElementTrade", keys = tradeCode),
+        Dimension(name = "timePointYears", keys = as.character(2009:2013)),
+        Dimension(
+            name = "measuredItemCPC",
+            keys = GetCodeList("trade", "total_trade_cpc_m49", "measuredItemCPC")[, code]
+        )
+    )
+)
+
+totalTradeData <- GetData(totalTradeKey, flags = F)
+totalTradeData <- dcast.data.table(totalTradeData, geographicAreaM49 + measuredItemCPC + 
+                     timePointYears ~ measuredElementTrade, value.var = "Value")
+
+setnames(totalTradeData, "5610", "imports")
+setnames(totalTradeData, "5910", "exports")
+
+totalTradeData[is.na(imports), imports := 0]
+totalTradeData[is.na(exports), exports := 0]
+totalTradeData[, netTrade := (imports - exports)]
+
 
 ## some validations
 
@@ -217,6 +243,15 @@ data <- merge(data, fdmData,
               by = c("foodDemand", "geographicAreaM49"),
               all.x = TRUE)
 
+## Let's merge data and totalTradeData
+keys <- c("geographicAreaM49", "timePointYears", "measuredItemCPC")
+data <- merge(data, totalTradeData[, c("geographicAreaM49", "timePointYears",
+                                       "measuredItemCPC", "netTrade"), with = F],
+              by = keys, all.x = T)
+
+data <- data[timePointYears %in% c(2011, 2012)]
+
+
 if(nrow(data) == 0){
     warning("data has no rows, so the module is ending...  Are you sure there ",
             "are observations for food for these commodities?")
@@ -233,9 +268,12 @@ if(nrow(data) == 0){
     ## functional form 2 in Food Factors database.
     data[, foodFunction := ifelse(foodFunction == 4, 3, foodFunction)]
     data[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
-                                    gdp_pc = .SD$GDP/.SD$population,
+                                    #gdp_pc = .SD$GDP/.SD$population,
+                                    gdp_pc = .SD$GDP,
                                     ## We can use the first value since they're all the same:
-                                    functionalForm = max(.SD$foodFunction, na.rm = TRUE)),
+                                    functionalForm = max(.SD$foodFunction, na.rm = TRUE),
+                                    pop = .SD$population,
+                                    trend_factor = 0),
          by = c("measuredItemCPC", "geographicAreaM49")]
     
     # In statistics, a forecast error is the difference between the actual or real
