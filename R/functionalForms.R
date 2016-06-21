@@ -9,6 +9,9 @@
 ##'   commodity.
 ##' @param gdp_pc_t0 Per person GDP (gross domestic product) at time t.
 ##' @param gdp_pc_t1 Per person GDP (gross domestic product) at time t+1.
+##' @param pop_t0 Population at time t.
+##' @param pop_t1 Population at time t+1.
+##' @param trend_factor Changes due to income and other factors.    
 ##'   
 ##' @return An estimate for the food consumption in year t1.
 ##' 
