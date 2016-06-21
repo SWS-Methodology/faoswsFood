@@ -249,7 +249,7 @@ data <- merge(data, totalTradeData[, c("geographicAreaM49", "timePointYears",
                                        "measuredItemCPC", "netTrade"), with = F],
               by = keys, all.x = T)
 
-data <- data[timePointYears %in% c(2011, 2012)]
+data <- data[timePointYears %in% c(2010, 2011)]
 
 
 if(nrow(data) == 0){
