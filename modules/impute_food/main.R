@@ -36,7 +36,7 @@ if(CheckDebug()){
     
 }
 
-if(swsContext.computationParams$yearToProcess <= 1997)
+if(swsContext.computationParams$yearToProcess < 1999)
     stop("This module was designed for imputation on years after 1998 only!")
 
 cat("Defining variables/dimensions/keys/...\n")
@@ -55,7 +55,7 @@ yearsForSD <- as.numeric(swsContext.datasets[[1]]@dimensions$timePointYears@keys
 # yearCodes <- swsContext.datasets[[1]]@dimensions$timePointYears@keys
 ## We need the previous year to compute change in GDP.  This allows us to
 ## calculate food in the new year.
-yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) + 0:16
+yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) + -1:15
 yearCodes <- as.character(yearCodes)
 ## GDP per capita (constant 2500 US$) is under this key
 gdpCodes <- "NY.GDP.PCAP.KD"
@@ -106,22 +106,12 @@ cat("Download all the datasets...\n")
 popData <- GetData(keyPop, flags=FALSE, normalized = FALSE,
                    pivoting = c(pivotM49, pivotTime, pivotPop))
 setnames(popData, "Value_measuredElementPopulation_21", "population")
-if(nrow(popData) == 0){
-    warning("Hot fix until SWS-1166 is resolved")
-    popData[, timePointYears := as.character(timePointYears)]
-    popData[, geographicAreaM49 := as.character(geographicAreaM49)]
-}
 
 ## download the gdp data from the SWS.  We're again only pulling one wbIndicator
 ## dimension, so we'll do the same thing we did for population.
 gdpData <- GetData(keyGDP, flags=FALSE, normalized = FALSE,
                    pivoting = c(pivotM49, pivotTime, pivotGDP))
 setnames(gdpData, "Value_wbIndicator_NY.GDP.PCAP.KD", "GDP")
-if(nrow(gdpData) == 0){
-    warning("Hot fix until SWS-1166 is resolved")
-    gdpData[, timePointYears := as.character(timePointYears)]
-    gdpData[, geographicAreaM49 := as.character(geographicAreaM49)]
-}
 
 ## download the food data from the SWS
 foodData <- getFoodData(timePointYears = yearCodes, areaCodesM49 = areaCodesM49,
@@ -136,21 +126,9 @@ setnames(foodData, "Value", "food")
 foodData[, type := getCommodityClassification(measuredItemCPC)]
 foodData = foodData[type %in% c("Food Estimate", "Food residual", "Food Residual")]
 
-if(nrow(foodData) > 0){
-    funcCodes <- commodity2FunctionalForm(
+funcCodes <- commodity2FunctionalForm(
         as.numeric(cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE)))
-    foodData <- cbind(foodData, do.call("cbind", funcCodes))
-    foodData[, foodDemand := as.character(foodDemand)]
-    foodData[, foodCommodity := as.character(foodCommodity)]
-} else {
-    foodData[, foodDemand := character()]
-    foodData[, foodCommodity := character()]
-    warning("Hot fix until SWS-1166 is resolved")
-    foodData[, timePointYears := as.character(timePointYears)]
-    foodData[, measuredElement := as.character(measuredElement)]
-    foodData[, measuredItemCPC := as.character(measuredItemCPC)]
-    foodData[, geographicAreaM49 := as.character(geographicAreaM49)]
-}
+foodData <- cbind(foodData, do.call("cbind", funcCodes))
 
 # foodData <- foodData[!is.na(foodDemand), ]
 cat("Food data downloaded with", nrow(foodData), "rows.\n")
@@ -160,7 +138,6 @@ fdmData <- GetData(keyFdm, flags=FALSE, normalized = FALSE)
 setnames(fdmData, "Value_foodVariable_y_e", "elasticity")
 setnames(fdmData, "foodFdm", "foodDemand")
 setnames(fdmData, "foodCommodityM", "foodCommodity")
-
 
 # read map table from old code to new code
 oldToNewCommodity = ReadDatatable("food_old_code_map")
@@ -206,25 +183,6 @@ setnames(totalTradeData, "5910", "exports")
 totalTradeData[is.na(imports), imports := 0]
 totalTradeData[is.na(exports), exports := 0]
 totalTradeData[, netTrade := (imports - exports)]
-
-
-## some validations
-
-popData[, list(countries = length(unique(geographicAreaM49))), 
-         by = timePointYears] # 239 countries
-
-gdpData[, list(countries = length(unique(geographicAreaM49))), 
-        by = timePointYears] # 185 countries
-
-foodData[, list(countries = length(unique(geographicAreaM49)),
-                cpcs = length(unique(measuredItemCPC)),
-                foodCommodity = length(unique(foodCommodity))), 
-         by = timePointYears] # 222 countries and 441 cpcs
-
-# fdmData[, list(countries = length(unique(geographicAreaM49)),
-#                foodCommodity = length(unique(foodCommodity)),
-#                foodDemand = length(unique(foodDemand)),
-#                foodFunctions = length(unique(foodFunction)))] # 220 countries and 441 cpcs
 
 ## Merge the datasets together, and perform some processing.
 
@@ -276,6 +234,13 @@ if(nrow(data) == 0){
                                     trend_factor = 0),
          by = c("measuredItemCPC", "geographicAreaM49")]
     
+    ## Incorporating total trade data. If the commodity is "food residual" we 
+    ## have to check the net trade data.
+    data[type %in% c("Food residual", "Food Residual") & netTrade > 0, 
+         foodHat := netTrade]
+    data[type %in% c("Food residual", "Food Residual") & netTrade <= 0, 
+         foodHat := 0]
+    
     # In statistics, a forecast error is the difference between the actual or real
     # and the predicted or forecast value of a time series or any other phenomenon
     # of interest.
@@ -325,13 +290,20 @@ if(nrow(data) == 0){
              "measuredItemCPC", "timePointYears")
     
     # Remove official data from dataToSave.  foodData has the official data, just
-    # need to remove missing and imputed
-    foodData = foodData[!flagObservationStatus %in% overwritableFlags &
-                        !is.na(flagObservationStatus), ]
-    dataToSave = merge(dataToSave, foodData[, c(keys, "food"), with = FALSE],
-              all.x = TRUE, by = keys)
-    dataToSave = dataToSave[is.na(food), ]
-    dataToSave[, food := NULL]
+    # need to remove missing and imputed.
+    
+    # By now there are no data for food in the agriculture/aproduction before 2011.
+    # This table should be populate by the table in the old system (food code 141).
+    # As the flagObservationStatus and flagMethod are only NA, we assume that these 
+    # figures are not officials. Thus, we'll save all the data computed for 2011.
+
+    # foodData = foodData[!flagObservationStatus %in% overwritableFlags &
+    #                     !is.na(flagObservationStatus), ]
+    # dataToSave = merge(dataToSave, foodData[, c(keys, "food"), with = FALSE],
+    #           all.x = TRUE, by = keys)
+    # dataToSave = dataToSave[is.na(food), ]
+    # dataToSave[, food := NULL]
+    
     dataToSave[, flagObservationStatus := "I"]
     dataToSave[, flagMethod := "e"]
     dataToSave = dataToSave[!is.na(Value), ]
