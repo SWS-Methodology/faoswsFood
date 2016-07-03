@@ -13,3 +13,4 @@ Adhoc Test
 *.csv
 *.zip
 modules/impute_food/sws.yml
+modules/food_input_validation/sws.yml
