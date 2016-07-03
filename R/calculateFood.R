@@ -6,6 +6,8 @@
 ##' @param gdp_pc Per person GDP (gross domestic product) at time t.
 ##' @param functionalForm Currently one of 0, 1, 2, or 3.  Specifies if a log-log,
 ##'   semi-log, or inverse-log food demand model should be used.
+##' @param pop Population at time t.
+##' @param trend_factor Changes due to income and other factors.
 ##'   
 ##' @return A numeric vector of the estimated food consumption.
 ##' 
