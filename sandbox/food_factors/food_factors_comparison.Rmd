@@ -1,0 +1,238 @@
+---
+title: "Food Module: Food Factors"
+
+author: |
+  | **Bruno Caetano Vidigal**
+  | Food and Agriculture Organization of the United Nations
+output: pdf_document
+---
+---
+
+```{r include=FALSE, cache=FALSE}
+## Load required functions
+library(data.table)
+library(ggplot2)
+library(scales)
+library(knitr)
+library(devtools)
+#install_github("ndphillips/yarrr")
+library("yarrr")
+library(RColorBrewer)
+library(data.table)
+library(faosws)
+library(dplyr)
+library(faoswsUtil)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE, cache=FALSE}
+## set up for the test environment and parameters
+# R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
+# DEBUG_MODE <- Sys.getenv("R_DEBUG_MODE")
+# overwritableFlags = c("M", "I")
+
+# This return FALSE if on the Statistical Working System
+if(CheckDebug()){
+    
+    message("Not on server, so setting up environment...")
+    
+    library(faoswsModules)
+    SETTINGS <- ReadSettings("C:/Users/caetano/Documents/Github/faoswsFood/modules/impute_food/sws.yml")
+    
+    # If you're not on the system, your settings will overwrite any others
+    R_SWS_SHARE_PATH <- SETTINGS[["share"]]
+    
+    # Define where your certificates are stored
+    SetClientFiles(SETTINGS[["certdir"]])
+    
+    # Get session information from SWS. Token must be obtained from web interface
+    GetTestEnvironment(baseUrl = SETTINGS[["server"]],
+                       token = SETTINGS[["token"]])
+    files = dir("~/Github/faoswsFood/R", full.names = TRUE)
+    sapply(files, source)
+    
+}
+```
+
+```{r include=FALSE, cache=FALSE}
+# Food Factors
+
+areaCodesFoodFactors <- GetCodeList("food", "food_factors","geographicAreaM49")$code
+comCodesFoodFactors <- GetCodeList("food", "food_factors","foodCommodityM")$code
+fdmCodesFoodFactors <- GetCodeList("food", "food_factors","foodFdm")$code
+funCodesFoodFactors <- GetCodeList("food", "food_factors","foodFunction")$code
+varCodesFoodFactors <- "y_e" ## Only need elasticities from the food domain table
+
+## Define the dimensions
+dimM49FoodFactors <- Dimension(name = "geographicAreaM49", keys = areaCodesFoodFactors)
+dimComFoodFactors <- Dimension(name = "foodCommodityM", keys = comCodesFoodFactors)
+dimFdmFoodFactors <- Dimension(name = "foodFdm", keys = fdmCodesFoodFactors)
+dimFunFoodFactors <- Dimension(name = "foodFunction", keys = funCodesFoodFactors)
+dimVarFoodFactors <- Dimension(name = "foodVariable", keys = varCodesFoodFactors)
+
+## Define the keys
+keyFdmFoodFactors <- DatasetKey(domain = "food", dataset = "food_factors",
+                     dimensions = list(dimM49FoodFactors, dimComFoodFactors, 
+                                       dimFdmFoodFactors, dimFunFoodFactors, 
+                                       dimVarFoodFactors))
+
+## download the food dimension data (elasticities) from the SWS
+foodFactors <- GetData(keyFdmFoodFactors, flags=FALSE, normalized = FALSE)
+foodFactors <- nameData("food", "food_factors", foodFactors)
+setnames(foodFactors, "Value_foodVariable_y_e", "elasticity")
+setnames(foodFactors, "foodFdm", "foodDemand")
+setnames(foodFactors, "foodCommodityM", "foodCommodity")
+foodFactors[, c("foodFdm_description", "foodFunction_description") := NULL]
+```
+
+
+```{r include=FALSE, cache=FALSE}
+
+# Food Factors Nat
+areaCodesFoodFactorsNat <- GetCodeList("food", "food_factors_n","geographicAreaM49")$code
+comCodesFoodFactorsNat <- GetCodeList("food", "food_factors_n","foodCommodityM")$code
+fdmCodesFoodFactorsNat <- GetCodeList("food", "food_factors_n","foodFdm")$code
+funCodesFoodFactorsNat <- GetCodeList("food", "food_factors_n","foodFunction")$code
+varCodesFoodFactorsNat <- "y_e" ## Only need elasticities from the food domain table
+
+## Define the dimensions
+dimM49FoodFactorsNat <- Dimension(name = "geographicAreaM49", keys = areaCodesFoodFactorsNat)
+dimComFoodFactorsNat <- Dimension(name = "foodCommodityM", keys = comCodesFoodFactorsNat)
+dimFdmFoodFactorsNat <- Dimension(name = "foodFdm", keys = fdmCodesFoodFactorsNat)
+dimFunFoodFactorsNat <- Dimension(name = "foodFunction", keys = funCodesFoodFactorsNat)
+dimVarFoodFactorsNat <- Dimension(name = "foodVariable", keys = varCodesFoodFactorsNat)
+
+
+
+keyFdmNat <- DatasetKey(domain = "food", dataset = "food_factors_n",
+                     dimensions = list(dimM49FoodFactorsNat, dimComFoodFactorsNat,
+                                       dimFdmFoodFactorsNat, dimFunFoodFactorsNat,
+                                       dimVarFoodFactorsNat))
+
+foodFactorsNat <- GetData(keyFdmNat, flags=FALSE, normalized = FALSE)
+foodFactorsNat <- nameData("food", "food_factors_n", foodFactorsNat)
+setnames(foodFactorsNat, "Value_foodVariable_y_e", "elasticityNat")
+setnames(foodFactorsNat, "foodFdm", "foodDemand")
+setnames(foodFactorsNat, "foodCommodityM", "foodCommodity")
+foodFactorsNat[, c("foodFdm_description", "foodFunction_description") := NULL]
+```
+
+## Abstract
+
+This vignette provides a comparison between the datasets food_factors and food_factors_nat in the food domain.
+
+# 1. Food Factors
+
+```{r, echo=FALSE}
+head(foodFactors, 4)
+```
+
+
+# 2. Food Factors Nat
+
+```{r, echo=FALSE}
+head(foodFactorsNat, 4)
+```
+
+# 3. Count
+
+```{r, echo=FALSE}
+
+foodFactorsTab <- foodFactors[, list(geographicAreaM49 = length(unique(geographicAreaM49)),
+                   foodCommodity = length(unique(foodCommodity)),
+                   foodDemand = length(unique(foodDemand)),
+                   foodFunction = length(unique(foodFunction)),
+                   nrows = nrow(foodFactors))]
+foodFactorsTab <- foodFactorsTab[, dataset:= "food_factors"]
+setcolorder(foodFactorsTab, c("dataset", "nrows", "geographicAreaM49", "foodCommodity", "foodDemand", "foodFunction"))
+
+foodFactorsNatTab <- foodFactorsNat[, list(geographicAreaM49 = length(unique(geographicAreaM49)),
+                      foodCommodity = length(unique(foodCommodity)),
+                      foodDemand = length(unique(foodDemand)),
+                      foodFunction = length(unique(foodFunction)),
+                      nrows = nrow(foodFactorsNat))]
+foodFactorsNatTab <- foodFactorsNatTab[, dataset:= "food_factors_nat"]
+setcolorder(foodFactorsNatTab, c("dataset", "nrows", "geographicAreaM49", "foodCommodity", "foodDemand", "foodFunction"))
+
+kable(rbind(foodFactorsTab, foodFactorsNatTab), 
+      format = "markdown", padding = 0)
+
+```
+
+
+# 4. What does exist in food_factors and does not exist in food_factors_nat?
+
+## 4.1 **geographicAreaM49** **Level**
+
+```{r, echo=FALSE}
+
+countryFoodFactors <- foodFactors[, .N, c("geographicAreaM49", "geographicAreaM49_description")]
+
+countryFoodFactorsNat <- foodFactorsNat[, .N, c("geographicAreaM49", "geographicAreaM49_description")]
+setnames(countryFoodFactorsNat, "geographicAreaM49_description", "geographicAreaM49_descriptionNat")
+
+mergeCountries <- merge(countryFoodFactors, 
+      countryFoodFactorsNat[, c("geographicAreaM49", "geographicAreaM49_descriptionNat"), with = F], 
+      by="geographicAreaM49", all = T)
+
+mergeCountries[is.na(geographicAreaM49_descriptionNat), .N, 
+               c("geographicAreaM49", 
+                 "geographicAreaM49_description")][, 
+                                                      c("geographicAreaM49", 
+                                                        "geographicAreaM49_description"),
+                                                      with = F]
+
+```
+
+
+## 4.2 **foodCommodity** **Level**
+
+```{r, echo=FALSE}
+
+foodCommodityFoodFactors <- foodFactors[, .N, c("foodCommodity", "foodCommodityM_description")]
+
+foodCommodityFoodFactorsNat <- foodFactorsNat[, .N, c("foodCommodity", "foodCommodityM_description")]
+setnames(foodCommodityFoodFactorsNat, "foodCommodityM_description", "foodCommodityM_descriptionNat")
+
+mergeCommodity <- merge(foodCommodityFoodFactors, 
+                        foodCommodityFoodFactorsNat[, c("foodCommodity", "foodCommodityM_descriptionNat"), with = F], 
+                        by="foodCommodity", all = T)
+
+
+mergeCommodity[is.na(foodCommodityM_description), .N, 
+               c("foodCommodity", 
+                 "foodCommodityM_descriptionNat")][, 
+                                                      c("foodCommodity", 
+                                                        "foodCommodityM_descriptionNat"),
+                                                      with = F]
+
+```
+
+# 5. What does exist in food_factors_nat and does not exist in food_factors?
+
+## 5.1 **geographicAreaM49** **Level**
+
+```{r, echo=FALSE}
+mergeCountries[is.na(geographicAreaM49_description), .N, 
+               c("geographicAreaM49", 
+                 "geographicAreaM49_descriptionNat")][, 
+                                                      c("geographicAreaM49", 
+                                                        "geographicAreaM49_descriptionNat"),
+                                                      with = F]
+```
+
+## 5.2 **foodCommodity** **Level**
+
+```{r, echo=FALSE}
+
+mergeCommodity[is.na(foodCommodityM_descriptionNat), .N, 
+               c("foodCommodity", 
+                 "foodCommodityM_description")][, 
+                                                   c("foodCommodity", 
+                                                     "foodCommodityM_description"),
+                                                   with = F]
+
+```
