@@ -4,7 +4,7 @@
 \alias{linear}
 \title{Functional forms}
 \usage{
-linear(food_t0, elas, gdp_pc_t0, gdp_pc_t1)
+linear(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor)
 }
 \arguments{
 \item{food_t0}{The food consumption at time t.}
@@ -15,6 +15,12 @@ commodity.}
 \item{gdp_pc_t0}{Per person GDP (gross domestic product) at time t.}
 
 \item{gdp_pc_t1}{Per person GDP (gross domestic product) at time t+1.}
+
+\item{pop_t0}{Population at time t.}
+
+\item{pop_t1}{Population at time t+1.}
+
+\item{trend_factor}{Changes due to income and other factors.}
 }
 \value{
 An estimate for the food consumption in year t1.
