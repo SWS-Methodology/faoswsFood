@@ -45,7 +45,7 @@ if(CheckDebug()){
 
   ## REVISION START ##
   ## SETTINGS <- ReadSettings("sws.yml")
-  SETTINGS <- ReadSettings(file.path("modules", name, "sws.yml"))
+  SETTINGS <- ReadSettings(file.path("modules/food_input_validation/sws.yml"))
   ## REVISION END ##
 
   ## If you're not on the system, your settings will overwrite any others
