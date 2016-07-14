@@ -1,8 +1,12 @@
-library(data.table)
-library(faosws)
-library(dplyr)
-library(faoswsUtil)
-#library(reshape2)
+suppressMessages({
+    library(data.table)
+    library(faosws)
+    library(dplyr)
+    library(faoswsUtil)
+    library(faoswsFood)
+    #library(reshape2)
+})
+
 
 ## To do:
 ## - Check the input dataset from Josef against what's on the server: ask Nick for

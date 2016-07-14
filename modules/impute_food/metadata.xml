@@ -6,8 +6,8 @@
 	<Category>Imputation</Category>
 	<Authors>
 		<Author>
-			<Name>Josh Browning</Name>
-			<Mail>joshua.browning@fao.org</Mail>
+			<Name>Bruno Vidigal</Name>
+			<Mail>bruno.caetanovidigal@fao.org</Mail>
 		</Author>
 	</Authors>
 	<Params>
@@ -15,10 +15,10 @@
 	        <Code>yearToProcess</Code>
 	            <Label>Year to Process</Label>
 		        <Description>
-			    Please specify which year the food module should be ran for.
+			    Please specify which year the food module should be ran for. Currently must be set to 1999 to run the imputation for 1999 to 2014 (requires data for 1998 as well).
 		        </Description>
 		        <Compulsory>true</Compulsory>
-                <Min>1998</Min>
+                <Min>1999</Min>
                 <Max>2014</Max>
 	    </Param>
 <!--
