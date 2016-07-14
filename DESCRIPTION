@@ -25,6 +25,7 @@ swsDatasetDepends: faostat_one:FS1_SUA_UPD,
     fal_2_m49,
     extraction_rates
 swsModuleDepends: 
+    faoswsTrade
 LazyData: yes
 ZipData: no
 VignetteBuilder: knitr
