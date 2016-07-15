@@ -1,6 +1,11 @@
 .Rproj.user
 .Rhistory
 .RData
+
+*.rds
+*.rda
+*.RData
+
 *.zip
 Adhoc Test
 
