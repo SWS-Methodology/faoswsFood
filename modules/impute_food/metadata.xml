@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <RScript xmlns="http://www.fao.org/rScript" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.fao.org/rScript rScript.xsd ">
 	<Name>Food Imputation</Name>
@@ -15,11 +15,11 @@
 	        <Code>yearToProcess</Code>
 	            <Label>Year to Process</Label>
 		        <Description>
-			    Please specify which year the food module should be ran for. Currently must be set to 1999 to run the imputation for 1999 to 2014 (requires data for 1998 as well).
+			    Please specify which year the food module should be ran for. Currently must be set to 1998 to run the imputation from 1991 to 2013.
 		        </Description>
 		        <Compulsory>true</Compulsory>
-                <Min>1999</Min>
-                <Max>2014</Max>
+                <Min>1991</Min>
+                <Max>2013</Max>
 	    </Param>
 <!--
 		<Param xsi:type="Number">
@@ -33,6 +33,24 @@
                 <Max>10</Max>
 	    </Param>
 	-->
+		<Param xsi:type="List">
+	    <Code>validation_selection</Code>
+	    <Label>Perform validation on </Label>
+		  <Description>
+			  Please specify the selection to perform imputation.
+		  </Description>
+		  <Compulsory>true</Compulsory>
+      <Options>
+				<Option>
+					<Label> Selected session </Label>
+					<Value>session</Value>
+				</Option>
+				<Option>
+					<Label> All Production Data </Label>
+					<Value>all</Value>
+				</Option>
+			</Options>
+    </Param>
 	</Params>
 	<Datasets>
 		<MainDataset>
