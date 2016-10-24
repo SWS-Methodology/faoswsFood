@@ -8,13 +8,15 @@
 ##'   semi-log, or inverse-log food demand model should be used.
 ##' @param pop Population at time t.
 ##' @param trend_factor Changes due to income and other factors.
+##' @param referenceYear Year of reference to compute the food estimates.
+##' @param dt Table in data.table format 
 ##'   
 ##' @return A numeric vector of the estimated food consumption.
 ##' 
 ##' @export
 ##' 
 
-calculateFood <- function(food, elas, gdp_pc, functionalForm, pop, trend_factor){
+calculateFood <- function(food, elas, gdp_pc, functionalForm, pop, trend_factor, referenceYear, dt){
     ## Data Quality Checks
     stopifnot(length(food) == length(elas))
     stopifnot(length(food) == length(gdp_pc))
@@ -46,10 +48,11 @@ calculateFood <- function(food, elas, gdp_pc, functionalForm, pop, trend_factor)
     
     ## gdp_pc_t1 should be the same as gdp_pc but offset by 1 (i.e. one year
     ## ahead).
-    N = length(gdp_pc)
-    gdp_pc_t0 = c(NA, gdp_pc[-N])
-    pop_t0 = c(NA, pop[-N])
-    func(food_t0 = c(NA, food[-N]), elas = elas, gdp_pc_t1 = gdp_pc,
+    food_t0 = dt[timePointYears == referenceYear, food]
+    gdp_pc_t0 = dt[timePointYears == referenceYear, GDP]
+    pop_t0 = dt[timePointYears == referenceYear, population]
+    
+    func(food_t0 = food_t0, elas = elas, gdp_pc_t1 = gdp_pc,
          gdp_pc_t0 = gdp_pc_t0, pop_t1 = pop, pop_t0 = pop_t0, 
          trend_factor = trend_factor)
 }
