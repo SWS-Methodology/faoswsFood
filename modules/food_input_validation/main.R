@@ -1,3 +1,4 @@
+## setwd("C:/Users/caetano/Documents/Github/faoswsFood")
 ## OBJECTIVE:
 ##   merge basic_main.R and faoswsProduction/modules/production_input_validation/main.R
 ##
@@ -65,6 +66,9 @@ if(CheckDebug()){
 
 ##' Obtain input computation parameter
 validationRange = swsContext.computationParams$validation_selection
+if(CheckDebug()){
+    validationRange = "all"
+}
 
 ##' Get session key and dataset configuration
 sessionKey = swsContext.datasets[[1]]
@@ -73,7 +77,7 @@ datasetConfig = GetDatasetConfig(domainCode = sessionKey@domain,
 
 
 ##' Obtain the complete imputation Datakey
-completeImputationKey = getCompleteImputationKey()
+completeImputationKey = getCompleteImputationKey(table = "food")
 
 ##' Selected the key based on the input parameter
 selectedKey =
@@ -82,9 +86,21 @@ selectedKey =
          "all" = completeImputationKey)
 
 
+## cpc_items = "Selected CPC codes are not in the dataset"
+
+dataset_cpc_codes <- GetCodeList("agriculture", "aproduction", "measuredItemCPC")[["code"]]
+session_cpc_codes <- selectedKey@dimensions$measuredItemCPC@keys
+
+
+## length(new_cpc_codes) - length(old_cpc_codes) 
+
+## ISSUE: previous codes are not in dataset - please provide new codes
+missing_cpc_codes <- setdiff(session_cpc_codes, dataset_cpc_codes)
+
+
 ##' Build processing parameters
-processingParameters =
-  productionProcessingParameters(datasetConfig = datasetConfig)
+# processingParameters =
+#   productionProcessingParameters(datasetConfig = datasetConfig)
 
 
 ##' Extract the data from the Statistical Working System
@@ -93,10 +109,10 @@ processingParameters =
 
 ##' Perform autocorrection, certain incorrectly specified flag can be
 ##' automatically corrected as per agreement with team B/C.
-autoFlagCorrection = function(data,
-                              flagObservationStatusVar = "flagObservationtatus",
-                              flagMethodVar = "flagMethod"){
-  dataCopy = copy(data)
+## autoFlagCorrection = function(data,
+  #                             flagObservationStatusVar = "flagObservationtatus",
+  #                             flagMethodVar = "flagMethod"){
+  # dataCopy = copy(data)
 
   ## ## Correction (1): (M, -) --> (M, u)
   ## correctionFilter =
@@ -115,12 +131,12 @@ autoFlagCorrection = function(data,
   ##               c("E", "-"))]
 
   ## ## Correction (3): (E, e) --> (I, e)
-  correctionFilter =
-    dataCopy[[flagObservationStatusVar]] == "E" &
-    dataCopy[[flagMethodVar]] == "e"
-  dataCopy[correctionFilter,
-           `:=`(c(flagObservationStatusVar, flagMethodVar),
-                c("I", "e"))]
+  # correctionFilter =
+  #   dataCopy[[flagObservationStatusVar]] == "E" &
+  #   dataCopy[[flagMethodVar]] == "e"
+  # dataCopy[correctionFilter,
+  #          `:=`(c(flagObservationStatusVar, flagMethodVar),
+  #               c("I", "e"))]
 
   ## ## Correction (4): (E, p) --> (E, f)
   ## correctionFilter =
@@ -130,8 +146,8 @@ autoFlagCorrection = function(data,
   ##          `:=`(c(flagObservationStatusVar, flagMethodVar),
   ##               c("E", "f"))]
 
-  dataCopy
-}
+#   dataCopy
+# }
 
 ## autoValueCorrection = function(data,
 ##                                processingParameters,
@@ -165,9 +181,9 @@ autoFlagCorrection = function(data,
 ## TODO (Michael): Need to auto correct values. (e.g. conflict area harvested
 ##                 production value.
 
-selectedItem =
-  unique(slot(slot(selectedKey, "dimensions")[[processingParameters$itemVar]],
-              "keys"))
+# selectedItem =
+#   unique(slot(slot(selectedKey, "dimensions")[[processingParameters$itemVar]],
+#               "keys"))
 
 ## ## COSMETIC MODIFICATION: combine "tests" and "testMessage" into named list:
 ## tests = c("flag_validity", "production_range",
@@ -178,11 +194,13 @@ selectedItem =
 ##                 "The following entry contain invalid yield value",
 ##                 "The following entry is imbalanced, check the values then re-run balance production identity module")
 testMessageList <- list(
-  flag_validity = "The following entry contains invalid flag",
-  production_range = "The following entry contain invalid production value",
-  areaHarvested_range = "The following entry contain invalid area harvsted value",
-  yield_range = "The following entry contain invalid yield value",
-  balanced = "The following entry is imbalanced, check the values then re-run balance production identity module"
+  cpc_items = paste("The selected CPC codes are not in the dataset.\nPlease update the fbs_food_comm_codes datatable:\n", 
+                    paste(missing_cpc_codes, collapse = " ")
+                    )
+  # production_range = "The following entry contain invalid production value",
+  # areaHarvested_range = "The following entry contain invalid area harvsted value",
+  # yield_range = "The following entry contain invalid yield value",
+  # balanced = "The following entry is imbalanced, check the values then re-run balance production identity module"
 )
 tests <- names(testMessageList)
 testMessage <- unname(unlist(testMessageList))
@@ -192,14 +210,14 @@ errorList = vector("list", length(tests))
 
 ##' Perform input validation item by item
 ## iter <- 1
-for(iter in seq(selectedItem)){
-
-  currentItem = selectedItem[iter]
-  message("Performing input validation for item: ", currentItem)
+# for(iter in seq(selectedItem)){
+# 
+#   currentItem = selectedItem[iter]
+#   message("Performing input validation for item: ", currentItem)
   ## currentFormula =
   ##     getYieldFormula(currentItem) %>%
   ##     removeIndigenousBiologicalMeat
-  currentKey = selectedKey
+  # currentKey = selectedKey
 
   ## ## Update the item and element key to for current item
   ## currentKey@dimensions$measuredItemCPC@keys = currentItem
@@ -217,22 +235,22 @@ for(iter in seq(selectedItem)){
   ##                                    unitConversion = unitConversion))
 
   ## Extract the current data
-  currentData =
-    currentKey %>%
-    GetData(key = .)
+  # currentData =
+  #   currentKey %>%
+  #   GetData(key = .)
   ## class(currentData)
 
   ## NOTE (Michael): The test should be conducted on the raw data, that is
   ##                 excluding any imputation, statistical estimation and
   ##                 previous calculated values. However, auto corrected
   ##                 values will be saved back to the database.
-  if(nrow(currentData) > 0){
-
-    autoCorrectedData =
-      currentData %>%
-      fillRecord(data = .) %>%
-      preProcessing(data = .) %>%
-      autoFlagCorrection(data = .) # %>%
+  # if(nrow(currentData) > 0){
+  # 
+  #   autoCorrectedData =
+  #     currentData %>%
+  #     fillRecord(data = .) %>%
+  #     preProcessing(data = .) %>%
+  #     autoFlagCorrection(data = .) # %>%
       ## denormalise(normalisedData = .,
       ##             denormaliseKey = processingParameters$elementVar) %>%
       ## autoValueCorrection(data = .,
@@ -240,21 +258,26 @@ for(iter in seq(selectedItem)){
       ##                     formulaParameters = formulaParameters) %>%
       ## normalise
 
-    rawData =
-      autoCorrectedData # %>%
+    # rawData =
+    #   autoCorrectedData # %>%
       ## denormalise(normalisedData = .,
       ##             denormaliseKey = processingParameters$elementVar) %>%
       ## processProductionDomain(data = .,
       ##                         processingParameters = processingParameters,
       ##                         formulaParameters = formulaParameters)
 
+## Check cpc codes
+errorList[[1]] =
+    missing_cpc_codes %>%
+    rbind(errorList[[1]], .)
+
     ## Check flag validity
-    errorList[[1]] =
-      rawData %>%
-      ## normalise %>%
-      ensureFlagValidity(data = .,
-                         getInvalidData = TRUE) %>%
-      rbind(errorList[[1]], .)
+    # errorList[[1]] =
+    #   rawData %>%
+    #   ## normalise %>%
+    #   ensureFlagValidity(data = .,
+    #                      getInvalidData = TRUE) %>%
+    #   rbind(errorList[[1]], .)
 
     ## ## Check production value
     ## errorList[[2]] =
@@ -336,36 +359,49 @@ for(iter in seq(selectedItem)){
     ##              dataset = sessionKey@dataset,
     ##              data = .)
 
-  } else {
-    message("Current Item has no data")
-  }
-
-}
+#   } else {
+#     message("Current Item has no data")
+#   }
+# 
+# }
 
 
 
 if(max(sapply(errorList, length)) > 0){
-  from = "notifier@ess-a.com"
-  to = swsContext.userEmail
-  subject = "Validation Result"
+  # from = "notifier@ess-a.com"
+  # to = swsContext.userEmail
+  # subject = "Validation Result"
   ## body = paste0("There are 5 tests current in the system:\n",
   ##               "1. Flag validity: Whether a flag is valid\n",
   ##               "2. Production range: [0, Inf)\n",
   ##               "3. Area Harvested range: [0, Inf)\n",
   ##               "4. Yield range: (0, Inf)\n",
   ##               "5. Production balanced")
-  body = paste0("There are", length(tests), "tests current in the system:\n",
-                paste0(tests, collapse = "\n")
+  body = paste0("Currently there are ", length(tests), " tests in the system:\n",
+                # paste0(tests, collapse = "\n")
+                paste0(
+                    paste0("===\n", tests, ": ", testMessage, "\n---\n")
+                    , 
+                    collapse = "\n")
                 )
-
+  ## cat(body)
+  ## CPC code error
+  # cpc_codeErrorAttachmentName = "cpc_code_error.csv"
+  # cpc_codeErrorAttachmentPath =
+  #     paste0(R_SWS_SHARE_PATH, "/kao/", cpc_codeErrorAttachmentName)
+  # write.csv(errorList[[1]], file = cpc_codeErrorAttachmentPath,
+  #           row.names = FALSE)
+  # cpc_codeErrorAttachmentObject = mime_part(x = cpc_codeErrorAttachmentPath,
+  #                                       name = cpc_codeErrorAttachmentName)
+  
   ## Flag error
-  flagErrorAttachmentName = "flag_error.csv"
-  flagErrorAttachmentPath =
-    paste0(R_SWS_SHARE_PATH, "/kao/", flagErrorAttachmentName)
-  write.csv(errorList[[1]], file = flagErrorAttachmentPath,
-            row.names = FALSE)
-  flagErrorAttachmentObject = mime_part(x = flagErrorAttachmentPath,
-                                        name = flagErrorAttachmentName)
+  # flagErrorAttachmentName = "flag_error.csv"
+  # flagErrorAttachmentPath =
+  #   paste0(R_SWS_SHARE_PATH, "/kao/", flagErrorAttachmentName)
+  # write.csv(errorList[[1]], file = flagErrorAttachmentPath,
+  #           row.names = FALSE)
+  # flagErrorAttachmentObject = mime_part(x = flagErrorAttachmentPath,
+  #                                       name = flagErrorAttachmentName)
 
   ## ## production value error
   ## prodValueErrorAttachmentName = "prodValue_error.csv"
@@ -412,18 +448,21 @@ if(max(sapply(errorList, length)) > 0){
 
 
 
-  bodyWithAttachment =
-    list(body,
-         flagErrorAttachmentObject
-        ## ,
-        ##  prodValueErrorAttachmentObject,
-        ##  areaValueErrorAttachmentObject,
-        ##  yieldValueErrorAttachmentObject,
-        ##  imbalanceErrorAttachmentObject
-         )
-  sendmail(from = from, to = to, subject = subject, msg = bodyWithAttachment)
-  stop("Production Input Invalid, please check follow up email on invalid data")
+  # bodyWithAttachment =
+  #   list(body,
+  #        cpc_codeErrorAttachmentObject
+  #        # flagErrorAttachmentObject
+  #       ## ,
+  #       ##  prodValueErrorAttachmentObject,
+  #       ##  areaValueErrorAttachmentObject,
+  #       ##  yieldValueErrorAttachmentObject,
+  #       ##  imbalanceErrorAttachmentObject
+  #        )
+  # sendmail(from = from, to = to, subject = subject, msg = bodyWithAttachment)
+  # stop("Food Input Invalid, please check follow up email on invalid data")
+  msg = paste("Food Input Invalid", body, sep = "\n")
+  ## cat(msg)
 } else {
-  msg = "Production Input Validation passed without any error!"
+  msg = "Food Input Validation passed without any error!"
 }
 msg

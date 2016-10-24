@@ -1,54 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <RScript xmlns="http://www.fao.org/rScript" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.fao.org/rScript rScript.xsd ">
-	<Name>New Module</Name>
-	<Description>A brief description of the module's functions</Description>
-	<Category>Imputation</Category>
+	<Name> Food Input Validation </Name>
+	<Description>This module is designed to ensure the food data complies with the
+    standards, and fulfil the input requirement for performing imputation.</Description>
+	<Category>Validation</Category>
 	<Authors>
 		<Author>
-			<Name>Your Name</Name>
-			<Mail>your.name@fao.org</Mail>
+			<Name>Bruno Caetano Vidigal</Name>
+			<Mail>bruno.caetanovidigal@fao.org</Mail>
 		</Author>
 	</Authors>
-		<Params>
-    <Param xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Number">
-            <Code>numberInput</Code>
-            <Label>Number</Label>
-            <Description>A number as input (R sees it as a char, though)</Description>
-            <Compulsory>true</Compulsory>
-            <Min>-10</Min>
-            <Max>10</Max>
-    </Param>
-    <Param xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="List">
-	    <Code>listInput</Code>
-	    <Label>List</Label>
-		  <Description>A drop-down box of options</Description>
+  <Params>
+		<Param xsi:type="List">
+	    <Code>validation_selection</Code>
+	    <Label>Perform validation on </Label>
+		  <Description>
+			  Please specify the selection to perform validation.
+		  </Description>
 		  <Compulsory>true</Compulsory>
       <Options>
 				<Option>
-					<Label>Option 1</Label>
-					<Value>op1</Value>
+					<Label> Selected session </Label>
+					<Value>session</Value>
 				</Option>
 				<Option>
-					<Label>Option 2</Label>
-					<Value>op2</Value>
-				</Option>
-        <Option>
-					<Label>Option 3</Label>
-					<Value>op3</Value>
+					<Label> All Food Data (as specified by fbs_food_comm_codes) </Label>
+					<Value>all</Value>
 				</Option>
 			</Options>
     </Param>
-      <Param xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="String">
-			<Code>stringInput</Code>
-			<Label>String</Label>
-			<Description>A string input</Description>
-			<Compulsory>false</Compulsory>
-		</Param>
-	</Params>
+  </Params>
 	<Datasets>
 		<MainDataset>
-			<Code>tablename</Code>
+			<Code>aproduction</Code>
 			<SelectableDimensions>
 				<SelectableDimension compulsory="true">geographicAreaM49</SelectableDimension>
 				<SelectableDimension compulsory="true">measuredItemCPC</SelectableDimension>
