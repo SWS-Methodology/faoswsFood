@@ -5,6 +5,7 @@ suppressMessages({
     library(faoswsUtil)
     library(faoswsFood)
     library(faoswsFlag)
+    library(countrycode)
     #library(reshape2)
 })
 
@@ -85,7 +86,15 @@ selectedKey =
 
 areaCodesM49 <- selectedKey@dimensions$geographicAreaM49@keys
 itemCodesCPC <- selectedKey@dimensions$measuredItemCPC@keys
+referenceYear <- as.numeric(sessionKey@dimensions$timePointYears@keys)
 ## ####
+
+# country codes for GDP
+worldbankAreaCode = GetCodeList(domain = "WorldBank",
+                                dataset = "worldbank_indicator",
+                                dimension = "worldbankArea")[, code]
+
+dimWorldbankArea <- Dimension(name = "worldbankArea", keys = worldbankAreaCode)
 
 #areaCodesM49 <- GetCodeList("agriculture", "aproduction", "geographicAreaM49")[type == "country",code]
 
@@ -140,8 +149,8 @@ pivotGDP <- Pivoting(code = "wbIndicator")
 ## Define the keys
 keyPop <- DatasetKey(domain = "population", dataset = "population",
                      dimensions = list(dimM49, dimPop, dimTime))
-keyGDP <- DatasetKey(domain = "WorldBank", dataset = "wb_ecogrw",
-                     dimensions = list(dimM49, dimGDP, dimTime))
+keyGDP <- DatasetKey(domain = "WorldBank", dataset = "worldbank_indicator",
+                     dimensions = list(dimWorldbankArea, dimGDP, dimTime))
 keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
                      dimensions = list(dimM49, dimCom, dimFdm, dimFun, dimVar))
 
@@ -159,10 +168,17 @@ popData <- GetData(keyPop, flags=FALSE, normalized = FALSE,
 setnames(popData, "Value_measuredElementPopulation_21", "population")
 
 ## download the gdp data from the SWS.  We're again only pulling one wbIndicator
-## dimension, so we'll do the same thing we did for population.
-gdpData <- GetData(keyGDP, flags=FALSE, normalized = FALSE,
-                   pivoting = c(pivotM49, pivotTime, pivotGDP))
-setnames(gdpData, "Value_wbIndicator_NY.GDP.PCAP.KD", "GDP")
+gdpData <- GetData(keyGDP, flags=FALSE, normalized = T)
+gdpData[, geographicAreaM49 := as.character(countrycode(worldbankArea, "iso2c", "iso3n"))]
+# Sudan has the wrong name (it should be former Sudan)
+# gdpData[geographicAreaM49 == "736", CountryName := "Sudan (former)"]
+# China should be 1248
+gdpData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+
+setnames(gdpData, "Value", "GDP")
+gdpData[, c("worldbankArea", "wbIndicator") := NULL]
+setcolorder(gdpData, c("geographicAreaM49", "timePointYears", "GDP"))
+gdpData <- gdpData[!is.na(geographicAreaM49)]
 
 ## download the food data from the SWS
 # foodData <- getFoodData(timePointYears = yearCodes, areaCodesM49 = areaCodesM49,
@@ -176,16 +192,40 @@ setnames(foodData, "Value", "food")
 ## use just commodities with the food classification "Food Estimate". For the 
 ## commodities classified as a "Food residual", we need to check if there is
 ## net trade for them.
-foodData[, type := getCommodityClassification(measuredItemCPC)]
-foodData = foodData[type %in% c("Food Estimate", "Food residual", "Food Residual")]
+# foodData[, type := getCommodityClassification(measuredItemCPC)]
+# foodData = foodData[type %in% c("Food Estimate", "Food residual", "Food Residual")]
+# 
+# 
+# funcCodes <- commodity2FunctionalForm(
+#         as.numeric(cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE)))
+# foodData <- cbind(foodData, do.call("cbind", funcCodes))
+# 
+# keys = c("flagObservationStatus", "flagMethod")
+# foodData <- merge(foodData, flagValidTable, all.x = T, by = keys)
+
+## Creating time series data set
+timeSeriesData <- data.table(timePointYears = rep(yearCodes),
+                             geographicAreaM49 = rep(areaCodesM49, each = length(yearCodes)),
+                             measuredItemCPC = rep(itemCodesCPC, each = length(areaCodesM49) * length(yearCodes)))
+
+timeSeriesData[, type := getCommodityClassification(measuredItemCPC)]
+timeSeriesData = timeSeriesData[type %in% c("Food Estimate", "Food Residual")]
 
 
-funcCodes <- commodity2FunctionalForm(
-        as.numeric(cpc2fcl(foodData$measuredItemCPC, returnFirst = TRUE)))
-foodData <- cbind(foodData, do.call("cbind", funcCodes))
+timeSeriesData <- merge(timeSeriesData, foodData, all.x = T,
+                        by = c("geographicAreaM49", "timePointYears", "measuredItemCPC"))
+
+timeSeriesData[, measuredElement := "5141"]
 
 keys = c("flagObservationStatus", "flagMethod")
-foodData <- merge(foodData, flagValidTable, all.x = T, by = keys)
+timeSeriesData <- merge(timeSeriesData, flagValidTable, all.x = T, by = keys)
+timeSeriesData[, .N, Protected]
+timeSeriesData[is.na(Protected), Protected := FALSE]
+
+funcCodes <- commodity2FunctionalForm(
+    as.numeric(cpc2fcl(timeSeriesData$measuredItemCPC, returnFirst = TRUE)))
+timeSeriesData <- cbind(timeSeriesData, do.call("cbind", funcCodes))
+setkeyv(timeSeriesData, c("geographicAreaM49", "timePointYears"))
 
 # foodData <- foodData[!is.na(foodDemand), ]
 cat("Food data downloaded with", nrow(foodData), "rows.\n")
@@ -232,7 +272,7 @@ data <- merge(popData, gdpData, all = TRUE,
               by = c("geographicAreaM49", "timePointYears"))
 
 cat("Merge in food data...\n")
-data = merge(foodData, data, all.x = TRUE,
+data = merge(timeSeriesData, data, all.x = TRUE,
              by = c("geographicAreaM49", "timePointYears"))
 
 cat("Merge in food demand model data...\n")
@@ -245,8 +285,9 @@ keys <- c("geographicAreaM49", "timePointYears", "measuredItemCPC")
 data <- merge(data, totalTradeData[, c("geographicAreaM49", "timePointYears",
                                        "measuredItemCPC", "netTrade"), with = F],
               by = keys, all.x = T)
+data[is.na(netTrade), netTrade := 0]
 
-data <- data[!(is.na(GDP) | is.na(population) | is.na(elasticity))]
+# data <- data[!(is.na(GDP) | is.na(population) | is.na(elasticity))]
 
 if(nrow(data) == 0){
     warning("data has no rows, so the module is ending...  Are you sure there ",
@@ -263,16 +304,17 @@ if(nrow(data) == 0){
     ## functional form 3 The functional form 32 is a typo. It was replaced by
     ## functional form 2 in Food Factors database.
     data[, foodFunction := ifelse(foodFunction == 4, 3, foodFunction)]
-    data[, foodHat := calculateFood(food = .SD$food, elas = .SD$elasticity,
-                                    #gdp_pc = .SD$GDP/.SD$population,
-                                    gdp_pc = .SD$GDP,
-                                    ## We can use the first value since they're all the same:
-                                    functionalForm = max(.SD$foodFunction, na.rm = TRUE),
-                                    pop = .SD$population,
-                                    trend_factor = 0,
-                                    referenceYear = 1998,
-                                    dt = .SD),
-         by = c("measuredItemCPC", "geographicAreaM49")]
+    data[, foodHat := computeFoodForwardBackward(food = food,
+                                                 pop = population,
+                                                 elas = elasticity,
+                                                 gdp = GDP,
+                                                 netTrade = netTrade,
+                                                 functionalForm = foodFunction,
+                                                 timePointYears = as.numeric(timePointYears),
+                                                 protected = Protected,
+                                                 type = type, 
+                                                 referenceYear = referenceYear),
+         by = list(geographicAreaM49, measuredItemCPC)]
     
     ## Incorporating total trade data. If the commodity is "food residual" we 
     ## have to check the net trade data.
@@ -301,7 +343,7 @@ if(nrow(data) == 0){
     #          var = mean(error^2, na.rm = TRUE),
     #          timePointYears = max(timePointYears)),
     #     by = c("geographicAreaM49", "measuredElement", "measuredItemCPC")]
-    dataToSave <- data[timePointYears >= swsContext.computationParams$yearToProcess, ]
+    dataToSave <- data[Protected == FALSE & timePointYears != referenceYear, ]
     
     ## To convert from mu/sigma to logmu/logsigma, we can use the method of moments
     ## estimators (which express the parameters of the log-normal distribution in
@@ -323,8 +365,8 @@ if(nrow(data) == 0){
     setnames(dataToSave, "foodHat", "Value")
     dataToSave[, measuredElement := "5141"]
     dataToSave <- dataToSave[, c("geographicAreaM49", "measuredElement",
-                                 "measuredItemCPC", "timePointYears", "Value",
-                                 "Protected"), with = FALSE]
+                                 "measuredItemCPC", "timePointYears", "Value"),
+                             with = FALSE]
     
     keys = c("geographicAreaM49", "measuredElement",
              "measuredItemCPC", "timePointYears")
@@ -344,11 +386,9 @@ if(nrow(data) == 0){
     # dataToSave = dataToSave[is.na(food), ]
     # dataToSave[, food := NULL]
     
-    dataToSave <- dataToSave[Protected == FALSE]
     dataToSave[, flagObservationStatus := "I"]
     dataToSave[, flagMethod := "e"]
     dataToSave <- dataToSave[!is.na(Value), ]
-    dataToSave[, "Protected" := NULL]
     
     setcolorder(dataToSave,
                 c("timePointYears", "geographicAreaM49", "measuredItemCPC",
