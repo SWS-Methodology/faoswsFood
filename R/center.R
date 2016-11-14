@@ -5,11 +5,8 @@
 ##' 
 ##' @param type A character value.
 ##' 
-##' ##' @export
+##' @export
 ##' 
-
-
-
 
 center <- function(type = c("0", "1", "2", "3", "NA"), ...) {
     
