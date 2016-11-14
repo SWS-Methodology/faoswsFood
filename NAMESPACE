@@ -2,6 +2,7 @@
 
 export(FoodModule)
 export(calculateFood)
+export(center)
 export(commodity2FunctionalForm)
 export(computeFoodForwardBackward)
 export(getCommodityClassification)
