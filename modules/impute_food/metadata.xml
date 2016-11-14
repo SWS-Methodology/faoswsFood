@@ -21,6 +21,17 @@
                 <Min>1991</Min>
                 <Max>2013</Max>
 	    </Param>
+		
+				<Param xsi:type="Number">
+	        <Code>referenceYear</Code>
+	            <Label>Reference Year</Label>
+		        <Description>
+			    Please specify the reference year. Currently must be set to 1998 to run the imputation from 1991 to 2013.
+		        </Description>
+		        <Compulsory>false</Compulsory>
+                <Min>1992</Min>
+                <Max>2012</Max>
+	    </Param>
 <!--
 		<Param xsi:type="Number">
 	        <Code>yearsForVar</Code>
