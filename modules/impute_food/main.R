@@ -86,7 +86,9 @@ selectedKey =
 
 areaCodesM49 <- selectedKey@dimensions$geographicAreaM49@keys
 itemCodesCPC <- selectedKey@dimensions$measuredItemCPC@keys
-referenceYear <- as.numeric(sessionKey@dimensions$timePointYears@keys)
+# referenceYear <- as.numeric(sessionKey@dimensions$timePointYears@keys)
+referenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$referenceYear), "1998",
+                        swsContext.computationParams$referenceYear))
 ## ####
 
 # country codes for GDP
