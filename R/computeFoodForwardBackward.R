@@ -70,8 +70,6 @@ computeFoodForwardBackward <- function(food, pop, elas, gdp, netTrade, functiona
             form = functionalForm[i]
             
             result[i] = center(form, food_t0, elas_t, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1)
-            # result[i] = (pop_t1/pop_t0) * food_t0
-            # result[i] = i
         } else {
             stop("This is not currently implemented.")
         }
