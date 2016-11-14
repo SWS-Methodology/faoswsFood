@@ -316,13 +316,6 @@ if(nrow(data) == 0){
                                                  referenceYear = referenceYear),
          by = list(geographicAreaM49, measuredItemCPC)]
     
-    ## Incorporating total trade data. If the commodity is "food residual" we 
-    ## have to check the net trade data.
-    data[type %in% c("Food residual", "Food Residual") & netTrade > 0, 
-         foodHat := netTrade]
-    data[type %in% c("Food residual", "Food Residual") & netTrade <= 0, 
-         foodHat := 0]
-    
     # In statistics, a forecast error is the difference between the actual or real
     # and the predicted or forecast value of a time series or any other phenomenon
     # of interest.
@@ -367,7 +360,7 @@ if(nrow(data) == 0){
     dataToSave <- dataToSave[, c("geographicAreaM49", "measuredElement",
                                  "measuredItemCPC", "timePointYears", "Value"),
                              with = FALSE]
-    
+
     keys = c("geographicAreaM49", "measuredElement",
              "measuredItemCPC", "timePointYears")
     
