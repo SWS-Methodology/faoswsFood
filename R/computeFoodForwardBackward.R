@@ -31,12 +31,13 @@ computeFoodForwardBackward <- function(food, pop, elas, gdp, netTrade, functiona
     result[first] = food[first]
     # forward
     for (i in (first+1):N){
-        if(type[i] == "Food Residual" & netTrade[i] > 0){
+        
+        if(protected[i] == TRUE){
+            result[i] = food[i]
+        } else if(type[i] == "Food Residual" & netTrade[i] > 0){
             result[i] = netTrade[i]
         } else if(type[i] == "Food Residual" & netTrade[i] <= 0){
             result[i] = 0
-        } else  if(protected[i] == TRUE){
-            result[i] = food[i]
         } else if(protected[i] == FALSE & type[i] != "Food Residual"){ 
             food_t0 = as.numeric(result[i-1])
             pop_t0 = as.numeric(pop[i-1])
@@ -53,13 +54,13 @@ computeFoodForwardBackward <- function(food, pop, elas, gdp, netTrade, functiona
     }
     # backward
     for (i in (first-1):1){
-        if(type[i] == "Food Residual" & netTrade[i] > 0){
+        if(protected[i] == TRUE){
+            result[i] = food[i]
+        } else if(type[i] == "Food Residual" & netTrade[i] > 0){
             result[i] = netTrade[i]
         } else if(type[i] == "Food Residual" & netTrade[i] <= 0){
             result[i] = 0
-        } else if(protected[i] == TRUE){
-            result[i] = food[i]
-        } else if(protected[i] == FALSE){ 
+        } else if(protected[i] == FALSE & type[i] != "Food Residual"){ 
             food_t0 = as.numeric(result[i+1])
             pop_t0 = as.numeric(pop[i+1])
             pop_t1 = as.numeric(pop[i])
@@ -76,4 +77,5 @@ computeFoodForwardBackward <- function(food, pop, elas, gdp, netTrade, functiona
         }
     }
     return(result)
+    
 }

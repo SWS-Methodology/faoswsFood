@@ -16,7 +16,7 @@
 ##' @export
 ##' 
 
-calculateFood <- function(food, elas, gdp_pc, functionalForm, pop, trend_factor, referenceYear, dt){
+calculateFood <- function(food, elas, gdp_pc, functionalForm, pop, referenceYear, dt){
     ## Data Quality Checks
     stopifnot(length(food) == length(elas))
     stopifnot(length(food) == length(gdp_pc))
@@ -53,6 +53,5 @@ calculateFood <- function(food, elas, gdp_pc, functionalForm, pop, trend_factor,
     pop_t0 = dt[timePointYears == referenceYear, population]
     
     func(food_t0 = food_t0, elas = elas, gdp_pc_t1 = gdp_pc,
-         gdp_pc_t0 = gdp_pc_t0, pop_t1 = pop, pop_t0 = pop_t0, 
-         trend_factor = trend_factor)
+         gdp_pc_t0 = gdp_pc_t0, pop_t1 = pop, pop_t0 = pop_t0)
 }

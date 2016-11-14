@@ -1,6 +1,6 @@
 ##' Functional forms
 ##' 
-##' These three different functions provide estimates for the food consumption 
+##' These four different functions provide estimates for the food consumption 
 ##' values in year t+1 given the consumption in year t, changes in income, and 
 ##' the elasticity of the particular commodity.
 ##' 
@@ -11,29 +11,33 @@
 ##' @param gdp_pc_t1 Per person GDP (gross domestic product) at time t+1.
 ##' @param pop_t0 Population at time t.
 ##' @param pop_t1 Population at time t+1.
-##' @param trend_factor Changes due to income and other factors.    
 ##'   
 ##' @return An estimate for the food consumption in year t1.
 ##' 
 ##' @export
 ##' 
 
-linear <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+linear <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1){
     #food_t0
-    (pop_t1/pop_t0) * (1 + trend_factor) * food_t0
+    # (pop_t1/pop_t0) * (1 + trend_factor) * food_t0
+    (pop_t1/pop_t0) * food_t0
 }
 
-logLog <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+logLog <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1){
     #food_t0 + exp(elas*log(gdp_pc_t1/gdp_pc_t0))
-    (pop_t1/pop_t0) * (1 + trend_factor) * food_t0 + pop_t1 * exp(elas * log(gdp_pc_t1/gdp_pc_t0))
+    #(pop_t1/pop_t0) * (1 + trend_factor) * food_t0 + pop_t1 * exp(elas * log(gdp_pc_t1/gdp_pc_t0))
+    (pop_t1/pop_t0) * food_t0 * exp(elas * log(gdp_pc_t1/gdp_pc_t0))
 }
-  
-semiLog <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+
+semiLog <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1){
     #food_t0+food_t0*elas*log(gdp_pc_t1/gdp_pc_t0)
-    (pop_t1/pop_t0) * food_t0 * (1 + elas * log(gdp_pc_t1/gdp_pc_t0) + trend_factor)
+    #(pop_t1/pop_t0) * food_t0 * (1 + elas * log(gdp_pc_t1/gdp_pc_t0) + trend_factor)
+    (pop_t1/pop_t0) * food_t0 * (1 + elas * log(gdp_pc_t1/gdp_pc_t0))
 }
-  
-logInverse <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1, trend_factor){
+
+logInverse <- function(food_t0, elas, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1){
     #food_t0 *(exp(elas*(1-1/(gdp_pc_t1/gdp_pc_t0))))
-    (pop_t1/pop_t0) * food_t0 * (exp(elas*(1-1/(gdp_pc_t1/gdp_pc_t0))) + trend_factor)
+    # (pop_t1/pop_t0) * food_t0 * (exp(elas*(1-1/(gdp_pc_t1/gdp_pc_t0))) + trend_factor)
+    (pop_t1/pop_t0) * food_t0 * (exp(elas*(1-1/(gdp_pc_t1/gdp_pc_t0))))
+      #(pop_t1/pop_t0) * food_t0 * (exp(elas/(gdp_pc_t1/gdp_pc_t0)))
 }

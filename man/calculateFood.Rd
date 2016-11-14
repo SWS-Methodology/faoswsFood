@@ -4,7 +4,8 @@
 \alias{calculateFood}
 \title{Calculate Food}
 \usage{
-calculateFood(food, elas, gdp_pc, functionalForm, pop, trend_factor)
+calculateFood(food, elas, gdp_pc, functionalForm, pop, trend_factor,
+  referenceYear, dt)
 }
 \arguments{
 \item{food}{The food consumption at time t.}
@@ -20,6 +21,10 @@ semi-log, or inverse-log food demand model should be used.}
 \item{pop}{Population at time t.}
 
 \item{trend_factor}{Changes due to income and other factors.}
+
+\item{referenceYear}{Year of reference to compute the food estimates.}
+
+\item{dt}{Table in data.table format}
 }
 \value{
 A numeric vector of the estimated food consumption.
