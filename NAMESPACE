@@ -3,6 +3,7 @@
 export(FoodModule)
 export(calculateFood)
 export(commodity2FunctionalForm)
+export(computeFoodForwardBackward)
 export(getCommodityClassification)
 export(getFoodData)
 export(getTotalTradeDataFAOSTAT1)
