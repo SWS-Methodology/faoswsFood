@@ -51,6 +51,8 @@ if(CheckDebug()){
 
 if(swsContext.computationParams$yearToProcess < 1991)
     stop("This module was designed for imputation on years after 1990 only!")
+referenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$referenceYear), "1998",
+                                   swsContext.computationParams$referenceYear))
 
 cat("Defining variables/dimensions/keys/...\n")
 
@@ -87,8 +89,7 @@ selectedKey =
 areaCodesM49 <- selectedKey@dimensions$geographicAreaM49@keys
 itemCodesCPC <- selectedKey@dimensions$measuredItemCPC@keys
 # referenceYear <- as.numeric(sessionKey@dimensions$timePointYears@keys)
-referenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$referenceYear), "1998",
-                        swsContext.computationParams$referenceYear))
+
 ## ####
 
 # country codes for GDP
