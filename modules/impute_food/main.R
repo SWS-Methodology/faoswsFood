@@ -49,10 +49,25 @@ if(CheckDebug()){
     
 }
 
-if(swsContext.computationParams$yearToProcess < 1991)
-    stop("This module was designed for imputation on years after 1990 only!")
+# if(swsContext.computationParams$yearToProcess < 1991)
+#     stop("This module was designed for imputation on years after 1990 only!")
 referenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$referenceYear), "1998",
                                    swsContext.computationParams$referenceYear))
+
+minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYearToProcess), "1991",
+                                   swsContext.computationParams$minYearToProcess))
+
+maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2013",
+                                      swsContext.computationParams$maxYearToProcess))
+
+# yearMinProcess <- min(referenceYear, minYearToProcess, maxYearToProcess)
+# yearMaxProcess <- max(referenceYear, minYearToProcess, maxYearToProcess)
+
+if(referenceYear < minYearToProcess | referenceYear > maxYearToProcess) 
+    stop("The reference year must be set to between the minimum and the maximum year")
+
+yearCodes <- minYearToProcess:maxYearToProcess
+yearCodes <- as.character(yearCodes)
 
 cat("Defining variables/dimensions/keys/...\n")
 
@@ -112,8 +127,8 @@ dimWorldbankArea <- Dimension(name = "worldbankArea", keys = worldbankAreaCode)
 # yearCodes <- swsContext.datasets[[1]]@dimensions$timePointYears@keys
 ## We need the previous year to compute change in GDP.  This allows us to
 ## calculate food in the new year.
-yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) + 0:22
-yearCodes <- as.character(yearCodes)
+# yearCodes <- as.numeric(swsContext.computationParams$yearToProcess) + 0:22
+# yearCodes <- as.character(yearCodes)
 ## GDP per capita (constant 2500 US$) is under this key
 gdpCodes <- "NY.GDP.PCAP.KD"
 ## The element 21 contains the FBS population numbers
@@ -207,9 +222,9 @@ setnames(foodData, "Value", "food")
 # foodData <- merge(foodData, flagValidTable, all.x = T, by = keys)
 
 ## Creating time series data set
-timeSeriesData <- data.table(timePointYears = rep(yearCodes),
-                             geographicAreaM49 = rep(areaCodesM49, each = length(yearCodes)),
-                             measuredItemCPC = rep(itemCodesCPC, each = length(areaCodesM49) * length(yearCodes)))
+timeSeriesData <- as.data.table(expand.grid(timePointYears = yearCodes,
+                             geographicAreaM49 = areaCodesM49,
+                             measuredItemCPC = itemCodesCPC))
 
 timeSeriesData[, type := getCommodityClassification(measuredItemCPC)]
 timeSeriesData = timeSeriesData[type %in% c("Food Estimate", "Food Residual")]
@@ -318,6 +333,8 @@ if(nrow(data) == 0){
                                                  type = type, 
                                                  referenceYear = referenceYear),
          by = list(geographicAreaM49, measuredItemCPC)]
+    
+    data <- data[timePointYears %in% minYearToProcess:maxYearToProcess]
     
     # In statistics, a forecast error is the difference between the actual or real
     # and the predicted or forecast value of a time series or any other phenomenon
