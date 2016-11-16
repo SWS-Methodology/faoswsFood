@@ -13,7 +13,7 @@
 	<Params>
 		<Param xsi:type="Number">
 	        <Code>minYearToProcess</Code>
-	            <Label>Year to Process</Label>
+	            <Label>Min Year to Process</Label>
 		        <Description>
 			    Please specify the minimum year the food module should be ran for. Currently is set to 1991.
 		        </Description>
