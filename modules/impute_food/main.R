@@ -334,8 +334,6 @@ if(nrow(data) == 0){
                                                  referenceYear = referenceYear),
          by = list(geographicAreaM49, measuredItemCPC)]
     
-    data <- data[timePointYears %in% minYearToProcess:maxYearToProcess]
-    
     # In statistics, a forecast error is the difference between the actual or real
     # and the predicted or forecast value of a time series or any other phenomenon
     # of interest.
