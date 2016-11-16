@@ -226,7 +226,7 @@ timeSeriesData <- as.data.table(expand.grid(timePointYears = yearCodes,
                              geographicAreaM49 = areaCodesM49,
                              measuredItemCPC = itemCodesCPC))
 
-timeSeriesData[, type := getCommodityClassification(measuredItemCPC)]
+timeSeriesData[, type := getCommodityClassification(as.character(measuredItemCPC))]
 timeSeriesData = timeSeriesData[type %in% c("Food Estimate", "Food Residual")]
 
 
