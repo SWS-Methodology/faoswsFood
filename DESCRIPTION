@@ -2,7 +2,7 @@ Package: faoswsFood
 Type: Package
 Title: Package to perform the computation of food consumption FAO food balance
     sheets
-Version: 0.2.4
+Version: 0.2.5
 Date: 2016-11-16
 Authors@R: c(person("Joshua", "Browning", role = "aut", email = "joshua.browning@fao.org"),
 			 person("Natalia", "Golini", role = "aut", email = "natalia.golini@fao.org"),
