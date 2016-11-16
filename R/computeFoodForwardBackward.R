@@ -29,51 +29,57 @@ computeFoodForwardBackward <- function(food, pop, elas, gdp, netTrade, functiona
     N = length(unique(timePointYears))
     first = referenceYear - min(timePointYears) + 1
     result[first] = food[first]
-    # forward
-    for (i in (first+1):N){
+    if (referenceYear > min(timePointYears)) {
         
-        if(protected[i] == TRUE){
-            result[i] = food[i]
-        } else if(type[i] == "Food Residual" & netTrade[i] > 0){
-            result[i] = netTrade[i]
-        } else if(type[i] == "Food Residual" & netTrade[i] <= 0){
-            result[i] = 0
-        } else if(protected[i] == FALSE & type[i] != "Food Residual"){ 
-            food_t0 = as.numeric(result[i-1])
-            pop_t0 = as.numeric(pop[i-1])
-            pop_t1 = as.numeric(pop[i])
-            elas_t = as.numeric(elas[i])
-            gdp_pc_t0 = as.numeric(gdp[i-1])
-            gdp_pc_t1 = as.numeric(gdp[i])
-            form = functionalForm[i]
-            
-            result[i] = center(form, food_t0, elas_t, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1)
-        } else {
-            stop("This is not currently implemented.")
-        }
+        # backward
+        for (i in (first-1):1){
+            if(protected[i] == TRUE){
+                result[i] = food[i]
+            } else if(type[i] == "Food Residual" & netTrade[i] > 0){
+                result[i] = netTrade[i]
+            } else if(type[i] == "Food Residual" & netTrade[i] <= 0){
+                result[i] = 0
+            } else if(protected[i] == FALSE & type[i] != "Food Residual"){ 
+                food_t0 = as.numeric(result[i+1])
+                pop_t0 = as.numeric(pop[i+1])
+                pop_t1 = as.numeric(pop[i])
+                elas_t = as.numeric(elas[i])
+                gdp_pc_t0 = as.numeric(gdp[i+1])
+                gdp_pc_t1 = as.numeric(gdp[i])
+                form = functionalForm[i]
+                
+                result[i] = center(form, food_t0, elas_t, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1)
+            } else {
+                stop("This is not currently implemented.")
+            }
+        }        
     }
-    # backward
-    for (i in (first-1):1){
-        if(protected[i] == TRUE){
-            result[i] = food[i]
-        } else if(type[i] == "Food Residual" & netTrade[i] > 0){
-            result[i] = netTrade[i]
-        } else if(type[i] == "Food Residual" & netTrade[i] <= 0){
-            result[i] = 0
-        } else if(protected[i] == FALSE & type[i] != "Food Residual"){ 
-            food_t0 = as.numeric(result[i+1])
-            pop_t0 = as.numeric(pop[i+1])
-            pop_t1 = as.numeric(pop[i])
-            elas_t = as.numeric(elas[i])
-            gdp_pc_t0 = as.numeric(gdp[i+1])
-            gdp_pc_t1 = as.numeric(gdp[i])
-            form = functionalForm[i]
+    
+    if (referenceYear < max(timePointYears)) {
+        # forward
+        for (i in (first+1):N){
             
-            result[i] = center(form, food_t0, elas_t, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1)
-        } else {
-            stop("This is not currently implemented.")
+            if(protected[i] == TRUE){
+                result[i] = food[i]
+            } else if(type[i] == "Food Residual" & netTrade[i] > 0){
+                result[i] = netTrade[i]
+            } else if(type[i] == "Food Residual" & netTrade[i] <= 0){
+                result[i] = 0
+            } else if(protected[i] == FALSE & type[i] != "Food Residual"){ 
+                food_t0 = as.numeric(result[i-1])
+                pop_t0 = as.numeric(pop[i-1])
+                pop_t1 = as.numeric(pop[i])
+                elas_t = as.numeric(elas[i])
+                gdp_pc_t0 = as.numeric(gdp[i-1])
+                gdp_pc_t1 = as.numeric(gdp[i])
+                form = functionalForm[i]
+                
+                result[i] = center(form, food_t0, elas_t, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1)
+            } else {
+                stop("This is not currently implemented.")
+            }
         }
+
     }
     return(result)
-    
 }
