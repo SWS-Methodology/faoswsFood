@@ -17,6 +17,7 @@ getTotalTradeDataFAOSTAT1 <- function(geographicAreaM49, measuredItemCPC, yearRa
     fcl =  suppressWarnings(as.character(as.numeric(cpc2fcl(measuredItemCPC, returnFirst = T))))
     fcl = fcl[!is.na(fcl)]
     countryFS =  suppressWarnings(m492fs(geographicAreaM49))
+	countryFS = countryFS[!is.na(countryFS)]
     totalTradeKey = DatasetKey(
         domain = "faostat_one",
         dataset = "FS1_SUA_UPD",
