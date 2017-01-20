@@ -6,6 +6,7 @@ suppressMessages({
     library(faoswsFood)
     library(faoswsFlag)
     library(countrycode)
+    library(zoo)
     #library(reshape2)
 })
 
@@ -154,7 +155,7 @@ dimFdm <- Dimension(name = "foodFdm", keys = fdmCodes)
 dimFun <- Dimension(name = "foodFunction", keys = funCodes)
 dimVar <- Dimension(name = "foodVariable", keys = varCodes)
 
-dimCPC <- Dimension(name = "measuredElement", keys = itemCodesCPC)
+# dimCPC <- Dimension(name = "measuredElement", keys = itemCodesCPC)
 
 
 ## Define the pivots.  We won't need this for all dimensions, so we'll only
@@ -197,6 +198,16 @@ setnames(gdpData, "Value", "GDP")
 gdpData[, c("worldbankArea", "wbIndicator") := NULL]
 setcolorder(gdpData, c("geographicAreaM49", "timePointYears", "GDP"))
 gdpData <- gdpData[!is.na(geographicAreaM49)]
+
+timeSeriesGDP <- as.data.table(expand.grid(geographicAreaM49 = unique(gdpData$geographicAreaM49),
+                                           timePointYears = unique(gdpData$timePointYears)))
+
+gdpData = merge(timeSeriesGDP, gdpData, by = c("geographicAreaM49", "timePointYears"), 
+                all.x = T)
+
+gdpData[, imputedGDP := na.locf(GDP, fromLast = TRUE)]
+gdpData[is.na(GDP), GDP := imputedGDP]
+gdpData[, c("imputedGDP", "diff") := NULL]
 
 ## download the food data from the SWS
 # foodData <- getFoodData(timePointYears = yearCodes, areaCodesM49 = areaCodesM49,
@@ -354,7 +365,8 @@ if(nrow(data) == 0){
     #          var = mean(error^2, na.rm = TRUE),
     #          timePointYears = max(timePointYears)),
     #     by = c("geographicAreaM49", "measuredElement", "measuredItemCPC")]
-    dataToSave <- data[Protected == FALSE & timePointYears != referenceYear, ]
+    # dataToSave <- data[Protected == FALSE & timePointYears != referenceYear, ]
+    dataToSave <- data[Protected == FALSE, ]
     
     ## To convert from mu/sigma to logmu/logsigma, we can use the method of moments
     ## estimators (which express the parameters of the log-normal distribution in
