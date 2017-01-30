@@ -186,6 +186,18 @@ popData <- GetData(keyPop, flags=FALSE, normalized = FALSE,
                    pivoting = c(pivotM49, pivotTime, pivotPop))
 setnames(popData, "Value_measuredElementPopulation_21", "population")
 
+
+timeSeriesPopData <- as.data.table(expand.grid(geographicAreaM49 = unique(popData$geographicAreaM49),
+                                           timePointYears = unique(popData$timePointYears)))
+
+popData = merge(timeSeriesPopData, popData, by = c("geographicAreaM49", "timePointYears"), 
+                all.x = T)
+
+popData[, imputedPopulation := na.locf(population, fromLast = TRUE)]
+popData[is.na(population), population := imputedPopulation]
+popData[, c("imputedPopulation", "diff") := NULL]
+
+
 ## download the gdp data from the SWS.  We're again only pulling one wbIndicator
 gdpData <- GetData(keyGDP, flags=FALSE, normalized = T)
 gdpData[, geographicAreaM49 := as.character(countrycode(worldbankArea, "iso2c", "iso3n"))]
