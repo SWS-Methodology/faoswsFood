@@ -61,7 +61,7 @@ yearAverage <- c("2004", "2005", "2006")
 #                                    swsContext.computationParams$minYearToProcess))
 
 minYearToProcess = "1991"
-maxYearToProcess = "2014"
+maxYearToProcess = "2015"
 
 # maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2014",
 #                                       swsContext.computationParams$maxYearToProcess))
@@ -100,6 +100,7 @@ sessionKey = swsContext.datasets[[1]]
 
 ##' Obtain the complete imputation Datakey
 completeImputationKey = getCompleteImputationKey("food")
+completeImputationKey@dimensions$timePointYears@keys = yearCodes
 # completeImputationKey@dataset = "fooddatafs_"
 
 ##' Selected the key based on the input parameter
@@ -268,7 +269,7 @@ gdpData = melt.data.table(gdp, id.vars = "geographicAreaM49")
 setnames(gdpData, "variable", "timePointYears")
 setnames(gdpData, "value", "GDP")
 
-gdpData = gdpData[!(timePointYears %in% c("1990", "2015", "2016"))]
+gdpData = gdpData[!(timePointYears %in% c("1990", "2016"))]
 gdpData[, timePointYears := as.character(timePointYears)]
 gdpData[, GDP := as.numeric(GDP)]
 gdpData = gdpData[!is.na(GDP)]
@@ -277,6 +278,35 @@ gdpData[, dupl := duplicated(timePointYears),
 
 gdpData = gdpData[dupl == FALSE]
 gdpData[, dupl := NULL]
+
+## There's no figures for Democratic People's Republic of Korea (North Korea) on 
+## Household Final Consumption Expenditure. Then we are going to use GDP data for it.
+northKorea = gdpData[geographicAreaM49 == "408"]
+setnames(northKorea, "GDP", "hhConsExp")
+
+## Household Final Consumption Expenditure
+hhConsExpForecasted = fread("sandbox/planB/household_final_consumption/household_final_consumptionhhConsExpForecasted.csv")
+hhConsExpForecasted = hhConsExpForecasted[timePointYears >= minYearToProcess]
+
+hhConsExpForecasted[, geographicAreaM49 := as.character(countrycode(FAOName, "country.name", "iso3n"))]
+hhConsExpForecasted[, c("FAOName", "FAOCode") := NULL]
+
+hhConsExpForecasted[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+setcolorder(hhConsExpForecasted, c("geographicAreaM49", "timePointYears", "hhConsExp"))
+
+hhConsExpForecasted = hhConsExpForecasted[!is.na(hhConsExp)]
+hhConsExpForecasted[, dupl := duplicated(timePointYears),
+                    by = list(geographicAreaM49)]
+
+hhConsExpForecasted = hhConsExpForecasted[dupl == FALSE]
+hhConsExpForecasted[, dupl := NULL]
+hhConsExpForecasted[, timePointYears := as.character(timePointYears)]
+
+## There's no figure for "Democratic People's Republic of Korea" in Household 
+## Final Consumption Expenditure
+
+hhConsExpForecasted = rbind(hhConsExpForecasted, northKorea)
+
 
 ## download the food data from the SWS
 # foodData <- getFoodData(timePointYears = yearCodes, areaCodesM49 = areaCodesM49,
@@ -703,6 +733,10 @@ data <- merge(popData, gdpData, all = TRUE,
               by = c("geographicAreaM49", "timePointYears"))
 data = data[!is.na(geographicAreaM49)]
 
+## merge household final consumption expenditure
+data = merge(data, hhConsExpForecasted, all.x = TRUE,
+             by = c("geographicAreaM49", "timePointYears"))
+
 cat("Merge in food data...\n")
 data = merge(timeSeriesData, data, all.x = TRUE,
              by = c("geographicAreaM49", "timePointYears"))
@@ -779,7 +813,7 @@ if(nrow(data) == 0){
     data[, foodHat := computeFoodForwardBackward(food = food,
                                                  pop = population,
                                                  elas = updatedElast,
-                                                 gdp = GDP,
+                                                 gdp = GDP, 
                                                  netTrade = netSupply,
                                                  functionalForm = updatedFoodFunction,
                                                  timePointYears = as.numeric(timePointYears),
