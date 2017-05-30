@@ -10,7 +10,7 @@ Adhoc Test
 *.png
 
 # Output files
-*.csv
+#*.csv
 *.zip
 *.RData
 modules/impute_food/sws.yml
