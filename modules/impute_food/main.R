@@ -255,29 +255,45 @@ popData[, c("imputedPopulation") := NULL]
 # gdpData[, c("imputedGDP", "diff") := NULL]
 
 ## GDP comes from unsd (Marie had sent to us this file. In March it will be available also in SWS)
-gdp = fread("sandbox/planB/gdp_forecast.csv", head = T)
-# gdpData = gdp[, c("FAOName", "year", "GDPPC_USD2005"), with = F]
-# gdpData = gdpData[year >= minYearToProcess & year <= maxYearToProcess]
-# setnames(gdpData, "GDPPC_USD2005", "GDP")
-# setnames(gdpData, "year", "timePointYears")
-gdp[, geographicAreaM49 := as.character(countrycode(FAOName, "country.name", "iso3n"))]
-gdp[, c("FAOName", "FAOCode") := NULL]
-# Sudan has the wrong name (it should be former Sudan)
-# gdpData[geographicAreaM49 == "736", FAOName := "Sudan (former)"]
-gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
-gdpData = melt.data.table(gdp, id.vars = "geographicAreaM49")
-setnames(gdpData, "variable", "timePointYears")
-setnames(gdpData, "value", "GDP")
+# gdp = fread("sandbox/planB/gdp_forecast.csv", head = T)
+# # gdpData = gdp[, c("FAOName", "year", "GDPPC_USD2005"), with = F]
+# # gdpData = gdpData[year >= minYearToProcess & year <= maxYearToProcess]
+# # setnames(gdpData, "GDPPC_USD2005", "GDP")
+# # setnames(gdpData, "year", "timePointYears")
+# gdp[, geographicAreaM49 := as.character(countrycode(FAOName, "country.name", "iso3n"))]
+# gdp[, c("FAOName", "FAOCode") := NULL]
+# # Sudan has the wrong name (it should be former Sudan)
+# # gdpData[geographicAreaM49 == "736", FAOName := "Sudan (former)"]
+# gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+# gdpData = melt.data.table(gdp, id.vars = "geographicAreaM49")
+# setnames(gdpData, "variable", "timePointYears")
+# setnames(gdpData, "value", "GDP")
+# 
+# gdpData = gdpData[!(timePointYears %in% c("1990", "2016"))]
+# gdpData[, timePointYears := as.character(timePointYears)]
+# gdpData[, GDP := as.numeric(GDP)]
+# gdpData = gdpData[!is.na(GDP)]
+# gdpData[, dupl := duplicated(timePointYears), 
+#         by = list(geographicAreaM49)]
+# 
+# gdpData = gdpData[dupl == FALSE]
+# gdpData[, dupl := NULL]
 
-gdpData = gdpData[!(timePointYears %in% c("1990", "2016"))]
-gdpData[, timePointYears := as.character(timePointYears)]
-gdpData[, GDP := as.numeric(GDP)]
-gdpData = gdpData[!is.na(GDP)]
-gdpData[, dupl := duplicated(timePointYears), 
-        by = list(geographicAreaM49)]
+gdpFAOSTAT <- fread("Data/FAOSTAT_data_8-1-2017_gdp.csv")
+gdpFAOSTAT[, geographicAreaM49 := fs2m49(as.character(`Area Code`))]
+gdpFAOSTAT[is.na(geographicAreaM49)]
+setnames(gdpFAOSTAT, c("Year", "Value"), c("timePointYears", "GDP"))
+gdpData <- gdpFAOSTAT[, c("geographicAreaM49", "timePointYears", "GDP")]
 
-gdpData = gdpData[dupl == FALSE]
-gdpData[, dupl := NULL]
+
+gdp_taiwan <- fread("Data/gdp-taiwan.csv")
+gdp_taiwan = gdp_taiwan[timePointYears >= minYearToProcess & timePointYears <= maxYearToProcess]
+gdp_taiwan[, geographicAreaM49 := as.character(geographicAreaM49)]
+gdp_taiwan[, timePointYears := as.character(timePointYears)]
+
+# Including Taiwan
+gdpData <- rbind(gdpData, gdp_taiwan)
+
 
 ## There's no figures for Democratic People's Republic of Korea (North Korea) on 
 ## Household Final Consumption Expenditure. Then we are going to use GDP data for it.
@@ -456,7 +472,7 @@ totalTradeKeySWS = DatasetKey(
         Dimension(name = "geographicAreaM49",
                   keys = unique(timeSeriesData$geographicAreaM49)),
         Dimension(name = "measuredElementTrade", keys = tradeCode),
-        Dimension(name = "timePointYears", keys = as.character(2000:maxYearToProcess)),
+        Dimension(name = "timePointYears", keys = as.character(2010:maxYearToProcess)),
         Dimension(name = "measuredItemCPC",
                   keys = unique(timeSeriesData$measuredItemCPC))
     )
@@ -475,7 +491,7 @@ setnames(totalTradeDataSWS, "5910", "exports")
 
 totalTradeDataFaostat <- getTotalTradeDataFAOSTAT1(unique(timeSeriesData$geographicAreaM49), 
                                                    unique(timeSeriesData$measuredItemCPC),
-                                                   as.character(minYearToProcess:1999))
+                                                   as.character(minYearToProcess:2009))
 
 totalTradeDataFaostat <- dcast.data.table(totalTradeDataFaostat, geographicAreaM49 + measuredItemCPC + 
                                               timePointYears ~ measuredElement, value.var = "Value")
