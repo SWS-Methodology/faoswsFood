@@ -6,7 +6,7 @@
 	<Category>Imputation</Category>
 	<Authors>
 		<Author>
-			<Name>Bruno Vidigal</Name>
+			<Name>Bruno Caetano Vidigal</Name>
 			<Mail>bruno.caetanovidigal@fao.org</Mail>
 		</Author>
 	</Authors>
@@ -19,7 +19,7 @@
 		        </Description>
 		        <Compulsory>true</Compulsory>
                 <Min>1991</Min>
-                <Max>2014</Max>
+                <Max>2016</Max>
 	    </Param>
 		
 		<Param xsi:type="Number">
@@ -30,18 +30,29 @@
 		        </Description>
 		        <Compulsory>true</Compulsory>
                 <Min>1991</Min>
-                <Max>2014</Max>
+                <Max>2016</Max>
 	    </Param>
 		
 		<Param xsi:type="Number">
-	        <Code>referenceYear</Code>
-	            <Label>Reference Year</Label>
+	        <Code>minReferenceYear</Code>
+	            <Label>Min Reference Year</Label>
 		        <Description>
-			    Please specify the reference year between the minimum and the maximum year to process. Currently must be set a time range (2004-2005-2006).
+			    Please specify the reference year between the minimum and the maximum year to process. Currently the minimum reference year is 2004.
 		        </Description>
 		        <Compulsory>false</Compulsory>
                 <Min>1991</Min>
-                <Max>2014</Max>
+                <Max>2016</Max>
+	    </Param>
+		
+		<Param xsi:type="Number">
+	        <Code>maxReferenceYear</Code>
+	            <Label>Max Reference Year</Label>
+		        <Description>
+			    Please specify the reference year between the minimum and the maximum year to process. Currently the maximum reference year is 2006.
+		        </Description>
+		        <Compulsory>false</Compulsory>
+                <Min>1991</Min>
+                <Max>2016</Max>
 	    </Param>
 <!--
 		<Param xsi:type="Number">
