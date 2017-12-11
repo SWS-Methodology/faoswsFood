@@ -20,7 +20,7 @@ getTotalTradeDataFAOSTAT1 <- function(geographicAreaM49, measuredItemCPC, yearRa
 	countryFS = countryFS[!is.na(countryFS)]
     totalTradeKey = DatasetKey(
         domain = "faostat_one",
-        dataset = "FS1_SUA_UPD",
+        dataset = "updated_sua_2013_data",
         dimensions = list(
             Dimension(name = "geographicAreaFS",
                       keys = countryFS),
