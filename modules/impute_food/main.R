@@ -65,7 +65,7 @@ if(minReferenceYear > maxReferenceYear | maxReferenceYear < minReferenceYear)
 
 # Parameters: year to process
 
-minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYearToProcess), "1991",
+minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYearToProcess), "1990",
                                       swsContext.computationParams$minYearToProcess))
 
 maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2016",
@@ -289,7 +289,14 @@ gdpData <- rbind(gdpData, gdp_taiwan)
 # #                        commCodesCPC = swsContext.datasets[[1]]@dimensions$measuredItemCPC@keys)
 #                          commCodesCPC = itemCodesCPC)
 
-foodData <- GetData(completeImputationKey, flags = TRUE)
+m49 <- completeImputationKey@dimensions$geographicAreaM49@keys
+m49 <- m49[!(m49 %in% c("831", "832"))]
+
+foodData <- getFoodDataFAOSTAT1(m49,
+                                completeImputationKey@dimensions$measuredItemCPC@keys,
+                                yearRange = as.character(minYearToProcess:maxYearToProcess),
+                                "updated_sua_2013_data")
+# foodData <- GetData(completeImputationKey, flags = TRUE)
 foodData <- foodData[timePointYears <= 2013]
 setnames(foodData, "Value", "food")
 foodData[, type := getCommodityClassification(as.character(measuredItemCPC))]
@@ -300,21 +307,28 @@ foodData = merge(foodData, flagValidTable, by = keys, all.x = T)
 
 ## Pull official food data from agriculture/aproduction
 
-completeImputationKey@domain <- "agriculture"
-completeImputationKey@dataset <- "aproduction"
-# completeImputationKey@dimensions$timePointYears@keys <- as.character(1991:2016)
-foodDataAgrApr <- GetData(completeImputationKey, flags = TRUE)
+# completeImputationKey@domain <- "agriculture"
+# completeImputationKey@dataset <- "aproduction"
+# # completeImputationKey@dimensions$timePointYears@keys <- as.character(1991:2016)
+# foodDataAgrApr <- GetData(completeImputationKey, flags = TRUE)
+
+# Instead of pulling data from aproduction, Tomasz recommended to use SUA Updated 2015
+# for the years 2014 and 2015.
+foodData2014_2015 <- getFoodDataFAOSTAT1(m49,
+                                completeImputationKey@dimensions$measuredItemCPC@keys,
+                                yearRange = as.character(2014:2015),
+                                "updated_sua_data")
 
 keys = c("flagObservationStatus", "flagMethod")
-foodDataAgrApr = merge(foodDataAgrApr, flagValidTable, by = keys, all.x = T)
-foodDataAgrApr = foodDataAgrApr[Protected == TRUE]
-foodDataAgrApr[, type := getCommodityClassification(as.character(measuredItemCPC))]
-foodDataAgrApr = foodDataAgrApr[type %in% c("Food Estimate", "Food Residual")]
-foodDataAgrApr[, combineFlag := paste(flagObservationStatus, flagMethod, sep = ";")]
+foodData2014_2015 = merge(foodData2014_2015, flagValidTable, by = keys, all.x = T)
+foodData2014_2015 = foodData2014_2015[Protected == TRUE]
+foodData2014_2015[, type := getCommodityClassification(as.character(measuredItemCPC))]
+foodData2014_2015 = foodData2014_2015[type %in% c("Food Estimate", "Food Residual")]
+foodData2014_2015[, combineFlag := paste(flagObservationStatus, flagMethod, sep = ";")]
 
 ## Merge both food data sets
 keys = c("geographicAreaM49", "timePointYears", "measuredItemCPC")
-foodDataMerge = merge(foodData, foodDataAgrApr[, c(keys, "Value", "combineFlag"), with = F],
+foodDataMerge = merge(foodData, foodData2014_2015[, c(keys, "Value", "combineFlag"), with = F],
       by = keys, all = T)
 
 # numbCasesM_ <- foodDataMerge[flagObservationStatus == "M" & flagMethod == "-", .N, timePointYears]
@@ -776,6 +790,28 @@ data[!is.na(elasticity), updatedElast := elasticity]
 data[is.na(foodFunction), updatedFoodFunction := foodFunctionAux]
 data[!is.na(foodFunction), updatedFoodFunction := foodFunction]
 
+## Analysing elasticity
+
+tabSD <- data[timePointYears == 2005, list(
+    minUpdatedElast = min(updatedElast, na.rm = T),
+    averageUpdatedElast = mean(updatedElast, na.rm = T),
+    sdUpdatedElast = sd(updatedElast, na.rm = T)), 
+    by = list(incomeGroup, measuredItemCPC)]
+
+tabSD[, lowerTreshold := averageUpdatedElast - 2 * sdUpdatedElast]
+tabSD[, upperTreshold := averageUpdatedElast + 2 * sdUpdatedElast]
+
+data <- merge(data, tabSD[, c("incomeGroup", "measuredItemCPC", "lowerTreshold",
+                              "upperTreshold", "averageUpdatedElast"), with = F],
+              by = c("incomeGroup", "measuredItemCPC"))
+
+data[updatedElast > upperTreshold | updatedElast < lowerTreshold, flagOutlier := 1]
+data[!(updatedElast > upperTreshold | updatedElast < lowerTreshold), flagOutlier := 0]
+
+data[flagOutlier == 1, newElasticity := averageUpdatedElast]
+data[flagOutlier == 0, newElasticity := updatedElast]
+##
+
 if(nrow(data) == 0){
     warning("data has no rows, so the module is ending...  Are you sure there ",
             "are observations for food for these commodities?")
@@ -794,7 +830,7 @@ if(nrow(data) == 0){
     data[, updatedFoodFunction := ifelse(updatedFoodFunction == 4, 3, updatedFoodFunction)]
     data[, foodHat := computeFoodForwardBackward(food = food,
                                                  pop = population,
-                                                 elas = updatedElast,
+                                                 elas = newElasticity,
                                                  gdp = GDP/population, 
                                                  netTrade = netSupply,
                                                  functionalForm = updatedFoodFunction,
@@ -804,7 +840,23 @@ if(nrow(data) == 0){
                                                  referenceYear = referenceYear),
          by = list(geographicAreaM49, measuredItemCPC)]
     
-
+    # data[, foodHatNewElast := computeFoodForwardBackward(food = food,
+    #                                              pop = population,
+    #                                              elas = newElasticity,
+    #                                              gdp = GDP/population, 
+    #                                              netTrade = netSupply,
+    #                                              functionalForm = updatedFoodFunction,
+    #                                              timePointYears = as.numeric(timePointYears),
+    #                                              protected = Protected,
+    #                                              type = type, 
+    #                                              referenceYear = referenceYear),
+    #      by = list(geographicAreaM49, measuredItemCPC)]
+    
+   # save(
+   #     "data", 
+   #     file = "C:/Users/caetano/Documents/food-ad-hoc/analysis_elasticity/comparing_new_elast_results/data.RData"
+   #     ) 
+   
     # data[, foodHat_no_pc := computeFoodForwardBackward(food = food,
     #                                              pop = population,
     #                                              elas = updatedElast,
