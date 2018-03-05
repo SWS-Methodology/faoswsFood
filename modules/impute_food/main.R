@@ -299,7 +299,14 @@ foodData <- getFoodDataFAOSTAT1(m49,
 # foodData <- GetData(completeImputationKey, flags = TRUE)
 foodData <- foodData[timePointYears <= 2013]
 setnames(foodData, "Value", "food")
-foodData[, type := getCommodityClassification(as.character(measuredItemCPC))]
+# foodData[, type := getCommodityClassification(as.character(measuredItemCPC))]
+food_classification_country_specific <- fread("Data/food_classification_country_specific.csv")
+foodData <- merge(
+    foodData, food_classification_country_specific, 
+    by = c("geographicAreaM49", "measuredItemCPC"),
+    all.x = T)
+
+setnames(foodData, "empiricFoodType", "type")
 foodData = foodData[type %in% c("Food Estimate", "Food Residual")]
 
 keys = c("flagObservationStatus", "flagMethod")
@@ -322,7 +329,14 @@ foodData2014_2015 <- getFoodDataFAOSTAT1(m49,
 keys = c("flagObservationStatus", "flagMethod")
 foodData2014_2015 = merge(foodData2014_2015, flagValidTable, by = keys, all.x = T)
 foodData2014_2015 = foodData2014_2015[Protected == TRUE]
-foodData2014_2015[, type := getCommodityClassification(as.character(measuredItemCPC))]
+# foodData2014_2015[, type := getCommodityClassification(as.character(measuredItemCPC))]
+foodData2014_2015 <- merge(
+    foodData2014_2015, food_classification_country_specific, 
+    by = c("geographicAreaM49", "measuredItemCPC"),
+    all.x = T)
+
+setnames(foodData2014_2015, "empiricFoodType", "type")
+
 foodData2014_2015 = foodData2014_2015[type %in% c("Food Estimate", "Food Residual")]
 foodData2014_2015[, combineFlag := paste(flagObservationStatus, flagMethod, sep = ";")]
 
@@ -440,7 +454,12 @@ timeSeriesData <- as.data.table(expand.grid(timePointYears = as.character(minYea
                              geographicAreaM49 = unique(foodDataMerge$geographicAreaM49),
                              measuredItemCPC = unique(foodDataMerge$measuredItemCPC)))
 
-timeSeriesData[, type := getCommodityClassification(as.character(measuredItemCPC))]
+# timeSeriesData[, type := getCommodityClassification(as.character(measuredItemCPC))]
+timeSeriesData <- merge(timeSeriesData, food_classification_country_specific, 
+                        by = c("geographicAreaM49", "measuredItemCPC"),
+                        all.x = T)
+
+setnames(timeSeriesData, "empiricFoodType", "type")
 
 timeSeriesData <- merge(timeSeriesData, foodDataMerge, all.x = T,
                         by = c("geographicAreaM49", "timePointYears", "measuredItemCPC"))
@@ -810,7 +829,17 @@ data[!(updatedElast > upperTreshold | updatedElast < lowerTreshold), flagOutlier
 
 data[flagOutlier == 1, newElasticity := averageUpdatedElast]
 data[flagOutlier == 0, newElasticity := updatedElast]
+
+# The country/commodity that has no food classification will be classified as
+# "Food Estimate".
+data[is.na(type), type := "Food Estimate"]
 ##
+
+# ## Workaround: let's make a test changing the classification of two commodities
+# ## (meat of pig and meat of chicken) only for Mexico to Food Residual (Prod + Net trade)
+# 
+# data[geographicAreaM49 == "484" & measuredItemCPC %in% c("21113.01", "21121"), 
+#               type := "Food Residual"]
 
 if(nrow(data) == 0){
     warning("data has no rows, so the module is ending...  Are you sure there ",
@@ -972,8 +1001,12 @@ if(nrow(data) == 0){
                   "measuredElement", "Value", "flagObservationStatus", "flagMethod"))
     
     cat("Save the final data...\n")
-
-    dataToSave <- dataToSave[geographicAreaM49 %in% c(360, 454, 484, 686, 1248, 392, 716)]
+    
+    # save a .csv to make analysis for the new food classification
+# write.csv(dataToSave, file = "C:/Users/caetano/Documents/food-ad-hoc/analysis_food_classification/foodNewClassification.csv",
+#           row.names = F)
+    
+    #dataToSave <- dataToSave[geographicAreaM49 %in% c(360, 454, 484, 686, 1248, 392, 716)]
     stats = SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 1800)
 }
 
