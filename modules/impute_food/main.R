@@ -368,10 +368,10 @@ timeSeriesData[, netSupply := netTrade + production]
 selectYearsTab = timeSeriesData[timePointYears %in% referenceYearRange]
 
 # If the figure is Protected in the reference year, we will not compute the food average for it 
-selectYearsTab = 
-    selectYearsTab[timePointYears == median(as.numeric(referenceYearRange)) & Protected == TRUE, 
-                   protectedAux := 1, 
-                   by = list(geographicAreaM49, measuredItemCPC)]
+
+selectYearsTab <- selectYearsTab[, protectedAux := ifelse(timePointYears == median(as.numeric(referenceYearRange)) &
+                                                              Protected == TRUE, 1, 0), 
+                                 by = list(geographicAreaM49, measuredItemCPC)]
 
 selectYearsTab[is.na(protectedAux), protectedAux := 0]
 selectYearsTab[, aux := max(protectedAux, na.rm = T),
@@ -572,6 +572,9 @@ tabSD <- data[timePointYears == referenceYear, list(
 
 tabSD[, lowerTreshold := averageUpdatedElast - 2 * sdUpdatedElast]
 tabSD[, upperTreshold := averageUpdatedElast + 2 * sdUpdatedElast]
+
+tabSD[, lowerTreshold := averageUpdatedElast]
+tabSD[, upperTreshold := averageUpdatedElast]
 
 data <- merge(data, tabSD[, c("incomeGroup", "measuredItemCPC", "lowerTreshold",
                               "upperTreshold", "averageUpdatedElast"), with = F],
