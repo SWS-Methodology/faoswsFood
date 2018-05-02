@@ -278,12 +278,11 @@ timeSeriesData <- merge(timeSeriesData, food_classification_country_specific,
 setnames(timeSeriesData, "foodClassification", "type")
 
 timeSeriesData <- merge(timeSeriesData, foodDataMerge, all.x = T,
-                        by = c("geographicAreaM49", "timePointYears", "measuredItemCPC"))
+                        by = c("geographicAreaM49", "timePointYears", "measuredItemCPC", "type"))
 
 timeSeriesData[, measuredElement := "5141"]
 
 keys = c("flagObservationStatus", "flagMethod")
-timeSeriesData <- merge(timeSeriesData, flagValidTable, all.x = T, by = keys)
 timeSeriesData[is.na(Protected), Protected := FALSE]
 
 ## Trade
