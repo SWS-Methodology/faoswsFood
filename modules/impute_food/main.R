@@ -573,8 +573,8 @@ tabSD <- data[timePointYears == referenceYear, list(
 tabSD[, lowerTreshold := averageUpdatedElast - 2 * sdUpdatedElast]
 tabSD[, upperTreshold := averageUpdatedElast + 2 * sdUpdatedElast]
 
-tabSD[, lowerTreshold := averageUpdatedElast]
-tabSD[, upperTreshold := averageUpdatedElast]
+tabSD[is.na(lowerTreshold), lowerTreshold := averageUpdatedElast]
+tabSD[is.na(upperTreshold), upperTreshold := averageUpdatedElast]
 
 data <- merge(data, tabSD[, c("incomeGroup", "measuredItemCPC", "lowerTreshold",
                               "upperTreshold", "averageUpdatedElast"), with = F],
