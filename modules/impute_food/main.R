@@ -29,7 +29,7 @@ if(CheckDebug()){
     SETTINGS <- ReadSettings("modules/impute_food/sws.yml")
     
     # If you're not on the system, your settings will overwrite any others
-    R_SWS_SHARE_PATH <- SETTINGS[["share"]]
+    R_SWS_SHARE_PATH <- "//hqlprsws1.hq.un.fao.org/sws_r_share"
     
     # Define where your certificates are stored
     SetClientFiles(SETTINGS[["certdir"]])
@@ -45,8 +45,14 @@ if(CheckDebug()){
     dir_name <- '/work/SWS_R_Share/caetano/food/Data/'
 }
 
+if (!CheckDebug()) {
+    
+    R_SWS_SHARE_PATH = Sys.getenv("R_SWS_SHARE_PATH")
+    
+}
+
 ## Use old trade data up to
-endYearOldTrade = 2013
+# endYearOldTrade = 2013
 
 minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minReferenceYear), "2011",
                                       swsContext.computationParams$minReferenceYear))
@@ -55,8 +61,7 @@ maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxRe
                                       swsContext.computationParams$maxReferenceYear))
 
 referenceYearRange <- as.character(minReferenceYear:maxReferenceYear)
-referenceYear <- round(median(as.numeric(referenceYearRange)))
-
+# referenceYear <- round(median(as.numeric(referenceYearRange)))
 if(minReferenceYear > maxReferenceYear | maxReferenceYear < minReferenceYear) 
     stop("Please check the time range for the reference years")
 
@@ -67,6 +72,8 @@ minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYe
 
 maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2016",
                                       swsContext.computationParams$maxYearToProcess))
+
+referenceYear = floor(median(minYearToProcess:maxYearToProcess))
 
 if(minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess) 
     stop("Please check the time range for the years to be processed")
@@ -176,28 +183,36 @@ popData = merge(timeSeriesPopData, popData, by = c("geographicAreaM49", "timePoi
 popData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
 # Get data: GDP
-gdpData <- ReadDatatable("gdp_usd2010")
-setnames(gdpData, old = c("geographic_area_m49", "time_point_years", "gdp_usd_2010"),
-         new = c("geographicAreaM49", "timePointYears", "GDP"))
+gdp = read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
+gdp = as.data.table(gdp)
+gdp[, geographicAreaM49 := as.character(countrycode(Country.Code, "iso3c", "iso3n"))]
+gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
-gdpData[, c("fao_name", "fao_code") := NULL]
-setcolorder(gdpData, c("geographicAreaM49", "timePointYears", "GDP"))
-gdpData[, geographicAreaM49 := as.character(geographicAreaM49)]
-gdpData[, timePointYears := as.character(timePointYears)]
+gdp = dplyr::filter(gdp,!is.na(geographicAreaM49))
+gdp = dplyr::select(gdp,-Country.Name,-Country.Code,-Indicator.Name,-Indicator.Code)
+gdp = as.data.table(gdp)
+gdpData = melt.data.table(gdp, id.vars = "geographicAreaM49")
+setnames(gdpData, "variable", "timePointYears")
+setnames(gdpData, "value", "GDP")
+gdpData = as.data.frame(gdpData)
+gdpData$timePointYears = substr(gdpData$timePointYears,2,5)
+gdpData = as.data.table(gdpData)
 
 # There are no data for Taiwan. So we get this table from Taiwan website.
 gdp_taiwan <- ReadDatatable("gdp_taiwan_2005_prices")
+
 gdp_taiwan[, time_point_years := as.numeric(time_point_years)]
+
 setnames(gdp_taiwan, old = c("geographic_area_m49", "time_point_years", "gdp"),
          new = c("geographicAreaM49", "timePointYears", "GDP"))
-
 gdp_taiwan = gdp_taiwan[timePointYears >= minYearToProcess & timePointYears <= maxYearToProcess]
 gdp_taiwan[, geographicAreaM49 := as.character(geographicAreaM49)]
-gdp_taiwan[, timePointYears := as.character(timePointYears)]
+gdp_taiwan[, timePointYears := as.character(timePointYears)] 
 
-# Including Taiwan
 gdpData <- rbind(gdpData, gdp_taiwan)
+
 gdpData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+
 
 # Key for food
 foodKey = DatasetKey(
@@ -286,6 +301,7 @@ keys = c("flagObservationStatus", "flagMethod")
 timeSeriesData[is.na(Protected), Protected := FALSE]
 
 ## Trade
+## Trade
 tradeCode <- c("5610", "5910")
 totalTradeKeySWS = DatasetKey(
     domain = "trade",
@@ -294,7 +310,7 @@ totalTradeKeySWS = DatasetKey(
         Dimension(name = "geographicAreaM49",
                   keys = unique(timeSeriesData$geographicAreaM49)),
         Dimension(name = "measuredElementTrade", keys = tradeCode),
-        Dimension(name = "timePointYears", keys = as.character((endYearOldTrade + 1):maxYearToProcess)),
+        Dimension(name = "timePointYears", keys = as.character(minYearToProcess:maxYearToProcess)),
         Dimension(name = "measuredItemCPC",
                   keys = unique(timeSeriesData$measuredItemCPC))
     )
@@ -311,18 +327,8 @@ totalTradeDataSWS <- dcast.data.table(totalTradeDataSWS, geographicAreaM49 + mea
 setnames(totalTradeDataSWS, "5610", "imports")
 setnames(totalTradeDataSWS, "5910", "exports")
 
-totalTradeDataFaostat <- getTotalTradeDataFAOSTAT1(unique(timeSeriesData$geographicAreaM49), 
-                                                   unique(timeSeriesData$measuredItemCPC),
-                                                   as.character(minYearToProcess:endYearOldTrade))
-
-totalTradeDataFaostat <- dcast.data.table(totalTradeDataFaostat, geographicAreaM49 + measuredItemCPC + 
-                                              timePointYears ~ measuredElement, value.var = "Value")
-
-setnames(totalTradeDataFaostat, "5610", "imports")
-setnames(totalTradeDataFaostat, "5910", "exports")
-
 ## Make a rbind between both total trade data from sws and faostat
-totalTradeData = rbind(totalTradeDataFaostat, totalTradeDataSWS)
+totalTradeData = totalTradeDataSWS
 
 totalTradeData[is.na(imports), imports := 0]
 totalTradeData[is.na(exports), exports := 0]
