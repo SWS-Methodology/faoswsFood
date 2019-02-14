@@ -328,6 +328,7 @@ setnames(totalTradeDataSWS, "5610", "imports")
 setnames(totalTradeDataSWS, "5910", "exports")
 
 ## Make a rbind between both total trade data from sws and faostat
+# NW: Now only from SWS
 totalTradeData = totalTradeDataSWS
 
 totalTradeData[is.na(imports), imports := 0]
@@ -650,7 +651,7 @@ if(nrow(data) == 0){
     
     cat("Save the final data...\n")
     
-    stats = SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 1800)
+    stats = SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 180000)
 }
 
 paste0("Food module completed successfully!!! ",
