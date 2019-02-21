@@ -16,3 +16,6 @@ Adhoc Test
 modules/impute_food/sws.yml
 modules/food_input_validation/sws.yml
 #sandbox
+
+# Vim files
+*.sw[a-z]
