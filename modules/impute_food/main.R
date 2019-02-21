@@ -9,13 +9,6 @@ suppressMessages({
     library(zoo)
 })
 
-if (!CheckDebug()) {
-    options(error = function(){
-        dump.frames()
-        save(last.dump, file="/work/SWS_R_Share/caetano/last.dump.RData")
-    })
-}
-
 ## Set up for the test environment and parameters
 R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
 DEBUG_MODE <- Sys.getenv("R_DEBUG_MODE")
@@ -44,6 +37,10 @@ if (CheckDebug()) {
 } else {
     dir_name <- '/work/SWS_R_Share/caetano/food/Data/'
     R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
+    options(error = function(){
+        dump.frames()
+        save(last.dump, file = "/work/SWS_R_Share/caetano/last.dump.RData")
+    })
 }
 
 ## Use old trade data up to
