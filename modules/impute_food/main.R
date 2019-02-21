@@ -33,9 +33,7 @@ if (CheckDebug()) {
     files <- dir("R", full.names = TRUE)
     sapply(files, source)
     
-    dir_name <- "//hqlprsws2.hq.un.fao.org/sws_r_share/caetano/food/Data/"
 } else {
-    dir_name <- '/work/SWS_R_Share/caetano/food/Data/'
     R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
     options(error = function(){
         dump.frames()
