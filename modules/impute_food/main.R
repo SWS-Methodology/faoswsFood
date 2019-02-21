@@ -50,10 +50,11 @@ minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minRe
 maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxReferenceYear), "2013",
                                       swsContext.computationParams$maxReferenceYear))
 
-referenceYearRange <- as.character(minReferenceYear:maxReferenceYear)
 # referenceYear <- round(median(as.numeric(referenceYearRange)))
 if (minReferenceYear > maxReferenceYear | maxReferenceYear < minReferenceYear) 
     stop("Please check the time range for the reference years")
+
+referenceYearRange <- as.character(minReferenceYear:maxReferenceYear)
 
 # Parameter: year to process
 
@@ -63,14 +64,10 @@ minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYe
 maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2016",
                                       swsContext.computationParams$maxYearToProcess))
 
-referenceYear <- floor(median(minYearToProcess:maxYearToProcess))
-
 if (minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess) 
     stop("Please check the time range for the years to be processed")
 
-
-if (referenceYear < minYearToProcess | referenceYear > maxYearToProcess) 
-    stop("The reference years must be set to between the minimum and the maximum year to process")
+referenceYear <- floor(median(minYearToProcess:maxYearToProcess))
 
 yearCodes <- as.character(minYearToProcess:maxYearToProcess)
 
