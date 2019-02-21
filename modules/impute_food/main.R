@@ -130,47 +130,89 @@ varCodes <- "y_e" ## Only need elasticities from the food domain table
 ## Define the dimensions
 dimM49 <- Dimension(name = "geographicAreaM49", keys = areaCodesM49)
 dimPop <- Dimension(name = "measuredElement", keys = populationCodes)
-dimElementGDP <- Dimension(name = "dim_element_fao_macro_ind", keys = gdpElementCode)
-dimItemGDP <- Dimension(name = "dim_item_fao_macro_ind", keys = gdpItemCode)
 dimTime <- Dimension(name = "timePointYears", keys = yearCodes)
-dimFood <- Dimension(name = "measuredElement", keys = foodCodes)
 dimCom <- Dimension(name = "foodCommodityM", keys = comCodes)
 dimFdm <- Dimension(name = "foodFdm", keys = fdmCodes)
 dimFun <- Dimension(name = "foodFunction", keys = funCodes)
 dimVar <- Dimension(name = "foodVariable", keys = varCodes)
+# Curently not used
+#dimElementGDP <- Dimension(name = "dim_element_fao_macro_ind", keys = gdpElementCode)
+#dimItemGDP <- Dimension(name = "dim_item_fao_macro_ind", keys = gdpItemCode)
+#dimFood <- Dimension(name = "measuredElement", keys = foodCodes)
 
 ## Define the pivots.  We won't need this for all dimensions, so we'll only
 ## define the relevant ones.
 pivotM49 <- Pivoting(code = "geographicAreaM49")
 pivotPop <- Pivoting(code = "measuredElement")
 pivotTime <- Pivoting(code = "timePointYears")
-pivotGDP <- Pivoting(code = "wbIndicator")
+# Currently not used
+#pivotGDP <- Pivoting(code = "wbIndicator")
 
-## Define the keys
-keyPop <- DatasetKey(domain = "population", dataset = "population_unpd",
+############################# Define the keys ######################
+
+# Keys for population
+detailskeyPop <- DatasetKey(domain = "population", dataset = "population_unpd",
                      dimensions = list(dimM49, dimPop, dimTime))
 
-keyGDP <- DatasetKey(domain = "faostat_datasets", dataset = "faostat_macro_ind",
-                     dimensions = list(dimFaoCode, dimElementGDP, dimItemGDP, dimTime))
+############# Currently not used
+#keyGDP <- DatasetKey(domain = "faostat_datasets", dataset = "faostat_macro_ind",
+#                     dimensions = list(dimFaoCode, dimElementGDP, dimItemGDP, dimTime))
 
+# Keys for food parameters
 keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
                      dimensions = list(dimM49, dimCom, dimFdm, dimFun, dimVar))
 
-# Get Data: Population
+# Key for food
+foodKey <- DatasetKey(
+    domain = "suafbs",
+    dataset = "sua_validated_2015",
+    dimensions = list(
+        Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+        Dimension(name = "measuredElementSuaFbs", keys = '5141'),
+        Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
+        Dimension(name = "timePointYears", keys = yearCodes)
+    )
+)
 
-popData <- GetData(keyPop, flags=FALSE, normalized = FALSE,
+# Key for trade
+tradeCode <- c("5610", "5910")
+totalTradeKeySWS <- DatasetKey(
+    domain = "trade",
+    dataset = "total_trade_cpc_m49",
+    dimensions = list(
+        Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+        Dimension(name = "measuredElementTrade", keys = tradeCode),
+        Dimension(name = "timePointYears", keys = yearCodes),
+        Dimension(name = "measuredItemCPC", keys = itemCodesCPC)
+    )
+)
+
+# Keys for production
+productionKey <- DatasetKey(
+    domain = "agriculture",
+    dataset = "aproduction",
+    dimensions = list(
+        Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+        Dimension(name = "measuredElement", keys = "5510"),
+        Dimension(name = "measuredItemCPC", keys = itemCodesCPC),
+        Dimension(name = "timePointYears", keys = yearCodes)
+    )
+)
+
+############################# Get data ######################
+
+# Population
+
+popData <- GetData(keyPop, flags = FALSE, normalized = FALSE,
                    pivoting = c(pivotM49, pivotTime, pivotPop))
 
-setnames(popData, "Value_measuredElement_511", "population")
+stopifnot(nrow(popData) > 0)
 
-timeSeriesPopData <- as.data.table(expand.grid(geographicAreaM49 = unique(popData$geographicAreaM49),
-                                               timePointYears = as.character(minYearToProcess:maxYearToProcess)))
 
-popData <- merge(timeSeriesPopData, popData, by = c("geographicAreaM49", "timePointYears"), all.x = T)
+# GDP
 
-popData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+# XXX: should use dataset/datatable
 
-# Get data: GDP
 gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
 gdp <- as.data.table(gdp)
 gdp[, geographicAreaM49 := as.character(countrycode(Country.Code, "iso3c", "iso3n"))]
@@ -202,25 +244,17 @@ gdpData <- rbind(gdpData, gdp_taiwan)
 
 gdpData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
+stopifnot(nrow(gdpData) > 0)
 
-# Key for food
-foodKey <- DatasetKey(
-    domain = "suafbs",
-    dataset = "sua_validated_2015",
-    dimensions = list(
-        Dimension(name = "geographicAreaM49",
-                  keys = areaCodesM49),
-        Dimension(name = "measuredElementSuaFbs", keys = '5141'),
-        Dimension(name = "measuredItemFbsSua",
-                  keys = itemCodesCPC),
-        Dimension(name = "timePointYears", keys = yearCodes)
-    )
-)
+
+# Food data from 2000
 
 foodDataFrom2000 <- GetData(foodKey, flags = TRUE)
 
-setnames(foodDataFrom2000, old = c("measuredElementSuaFbs", "measuredItemFbsSua", "Value"),
-         new = c("measuredElement", "measuredItemCPC", "food"))
+stopifnot(nrow(foodDataFrom2000) > 0)
+
+
+# Food before 2000
 
 # The sua_validated_2015 starts from 2000. In order to get the data from 1990-1999,
 # we will keep pulling data from updated_sua_2013_data. If in future we not need the
@@ -231,6 +265,53 @@ foodDataUpTo1999 <- getFoodDataFAOSTAT1(areaCodesM49,
                                 yearRange = as.character(1990:1999),
                                 "updated_sua_2013_data")
 
+stopifnot(nrow(foodDataUpTo1999) > 0)
+
+
+# Trade data
+
+totalTradeData <- GetData(totalTradeKeySWS, flags = FALSE)
+
+stopifnot(nrow(totalTradeData) > 0)
+
+
+# Production
+
+productionData <- GetData(productionKey, flags = TRUE)
+
+stopifnot(nrow(productionData) > 0)
+
+
+# Elasticities & co.
+
+fdmData <- GetData(keyFdm, flags = FALSE, normalized = FALSE)
+
+stopifnot(nrow(fdmData) > 0)
+
+# Read the food_classification table
+food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
+
+stopifnot(nrow(food_classification_country_specific) > 0)
+
+
+
+
+
+setnames(popData, "Value_measuredElement_511", "population")
+
+timeSeriesPopData <- as.data.table(expand.grid(geographicAreaM49 = unique(popData$geographicAreaM49),
+                                               timePointYears = as.character(minYearToProcess:maxYearToProcess)))
+
+popData <- merge(timeSeriesPopData, popData, by = c("geographicAreaM49", "timePointYears"), all.x = T)
+
+popData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+
+
+
+setnames(foodDataFrom2000, old = c("measuredElementSuaFbs", "measuredItemFbsSua", "Value"),
+         new = c("measuredElement", "measuredItemCPC", "food"))
+
+
 setnames(foodDataUpTo1999, old = "Value", new = "food")
 
 setcolorder(foodDataUpTo1999, c("geographicAreaM49", "measuredElement", "measuredItemCPC",
@@ -239,8 +320,6 @@ setcolorder(foodDataUpTo1999, c("geographicAreaM49", "measuredElement", "measure
 # Bind those data sets
 foodData <- rbind(foodDataUpTo1999, foodDataFrom2000)
 
-# Read the food_classification table
-food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
 
 setnames(food_classification_country_specific,
          old = c("geographic_area_m49", "measured_item_cpc", "food_classification"),
@@ -306,36 +385,17 @@ keys <- c("flagObservationStatus", "flagMethod")
 timeSeriesData[is.na(Protected), Protected := FALSE]
 
 ## Trade
-## Trade
-tradeCode <- c("5610", "5910")
-totalTradeKeySWS <- DatasetKey(
-    domain = "trade",
-    dataset = "total_trade_cpc_m49",
-    dimensions = list(
-        Dimension(name = "geographicAreaM49",
-                  keys = unique(timeSeriesData$geographicAreaM49)),
-        Dimension(name = "measuredElementTrade", keys = tradeCode),
-        Dimension(name = "timePointYears", keys = as.character(minYearToProcess:maxYearToProcess)),
-        Dimension(name = "measuredItemCPC",
-                  keys = unique(timeSeriesData$measuredItemCPC))
-    )
-)
 
-totalTradeDataSWS <- GetData(totalTradeKeySWS, flags = FALSE)
 
-totalTradeDataSWS <-
+totalTradeData <-
   dcast.data.table(
-    totalTradeDataSWS,
+    totalTradeData,
     geographicAreaM49 + measuredItemCPC + timePointYears ~ measuredElementTrade,
     value.var = "Value",
     fill = 0
   )
 
-setnames(totalTradeDataSWS, c("5610", "5910"), c("imports", "exports"))
-
-## Make a rbind between both total trade data from sws and faostat
-# NW: Now only from SWS
-totalTradeData <- totalTradeDataSWS
+setnames(totalTradeData, c("5610", "5910"), c("imports", "exports"))
 
 totalTradeData[, netTrade := (imports - exports)]
 
@@ -347,21 +407,7 @@ timeSeriesData[is.na(imports), imports := 0]
 timeSeriesData[is.na(exports), exports := 0]
 
 ## Production
-productionKey <- DatasetKey(
-    domain = "agriculture",
-    dataset = "aproduction",
-    dimensions = list(
-        Dimension(name = "geographicAreaM49",
-                  keys = unique(timeSeriesData$geographicAreaM49)),
-        Dimension(name = "measuredElement",
-                  keys = "5510"),
-        Dimension(name = "measuredItemCPC",
-                  keys = unique(timeSeriesData$measuredItemCPC)),
-        Dimension(name = "timePointYears",
-                  keys = as.character(minYearToProcess:maxYearToProcess)))
-)
 
-productionData <- GetData(productionKey, flags = TRUE)
 
 productionData[, c("measuredElement", "flagObservationStatus", "flagMethod") := NULL]
 
@@ -523,7 +569,6 @@ setkeyv(timeSeriesData, c("geographicAreaM49", "timePointYears"))
 cat("Food data downloaded with", nrow(foodData), "rows.\n")
 
 # Elasticity
-fdmData <- GetData(keyFdm, flags = FALSE, normalized = FALSE)
 
 setnames(fdmData, old = c("Value_foodVariable_y_e", "foodFdm", "foodCommodityM"),
          new = c("elasticity", "foodDemand", "foodCommodity"))
