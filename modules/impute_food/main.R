@@ -22,7 +22,7 @@ if (CheckDebug()) {
     SETTINGS <- ReadSettings("modules/impute_food/sws.yml")
 
     # If you're not on the system, your settings will overwrite any others
-    R_SWS_SHARE_PATH <- "//hqlprsws1.hq.un.fao.org/sws_r_share"
+    R_SWS_SHARE_PATH <- SETTINGS[["share"]]
 
     # Define where your certificates are stored
     SetClientFiles(SETTINGS[["certdir"]])
