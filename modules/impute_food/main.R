@@ -301,8 +301,19 @@ food_classification_country_specific <- ReadDatatable("food_classification_count
 stopifnot(nrow(food_classification_country_specific) > 0)
 
 
+############### Set names
+
 
 setnames(popData, "Value", "population")
+
+setnames(foodDataFrom2000, old = c("measuredElementSuaFbs", "measuredItemFbsSua", "Value"),
+         new = c("measuredElement", "measuredItemCPC", "food"))
+
+setnames(foodDataUpTo1999, old = "Value", new = "food")
+
+setnames(food_classification_country_specific,
+         old = c("geographic_area_m49", "measured_item_cpc", "food_classification"),
+         new = c("geographicAreaM49", "measuredItemCPC", "type"))
 
 timeSeriesPopData <- as.data.table(expand.grid(geographicAreaM49 = unique(popData$geographicAreaM49),
                                                timePointYears = as.character(minYearToProcess:maxYearToProcess)))
@@ -313,11 +324,6 @@ popData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
 
 
-setnames(foodDataFrom2000, old = c("measuredElementSuaFbs", "measuredItemFbsSua", "Value"),
-         new = c("measuredElement", "measuredItemCPC", "food"))
-
-
-setnames(foodDataUpTo1999, old = "Value", new = "food")
 
 setcolorder(foodDataUpTo1999, c("geographicAreaM49", "measuredElement", "measuredItemCPC",
                                 "food", "timePointYears", "flagObservationStatus", "flagMethod"))
@@ -326,17 +332,11 @@ setcolorder(foodDataUpTo1999, c("geographicAreaM49", "measuredElement", "measure
 foodData <- rbind(foodDataUpTo1999, foodDataFrom2000)
 
 
-setnames(food_classification_country_specific,
-         old = c("geographic_area_m49", "measured_item_cpc", "food_classification"),
-         new = c("geographicAreaM49", "measuredItemCPC", "foodClassification"))
-
 foodData <- merge(
     foodData,
     food_classification_country_specific,
     by = c("geographicAreaM49", "measuredItemCPC"),
     all.x = TRUE)
-
-setnames(foodData, "foodClassification", "type")
 
 foodData <- foodData[type %in% c("Food Estimate", "Food Residual")]
 
@@ -372,8 +372,6 @@ timeSeriesData <-
     by = c("geographicAreaM49", "measuredItemCPC"),
     all.x = TRUE
   )
-
-setnames(timeSeriesData, "foodClassification", "type")
 
 timeSeriesData <-
   merge(
