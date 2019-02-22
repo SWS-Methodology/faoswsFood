@@ -247,13 +247,6 @@ gdpData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 stopifnot(nrow(gdpData) > 0)
 
 
-# Food data from 2000
-
-foodDataFrom2000 <- GetData(foodKey, flags = TRUE)
-
-stopifnot(nrow(foodDataFrom2000) > 0)
-
-
 # Food before 2000
 
 # The sua_validated_2015 starts from 2000. In order to get the data from 1990-1999,
@@ -266,6 +259,13 @@ foodDataUpTo1999 <- getFoodDataFAOSTAT1(areaCodesM49,
                                 "updated_sua_2013_data")
 
 stopifnot(nrow(foodDataUpTo1999) > 0)
+
+
+# Food data from 2000
+
+foodDataFrom2000 <- GetData(foodKey, flags = TRUE)
+
+stopifnot(nrow(foodDataFrom2000) > 0)
 
 
 # Trade data
@@ -288,6 +288,19 @@ fdmData <- GetData(keyFdm, flags = FALSE, normalized = FALSE)
 
 stopifnot(nrow(fdmData) > 0)
 
+
+# Read map table from old code to new code
+oldToNewCommodity <- ReadDatatable("food_old_code_map")
+
+stopifnot(nrow(oldToNewCommodity) > 0)
+
+
+## Country income group
+countryIncomeGroup <- ReadDatatable("country_income_group")
+
+stopifnot(nrow(countryIncomeGroup) > 0)
+
+
 # Read the food_classification table
 food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
 
@@ -302,7 +315,7 @@ setnames(popData, "Value_measuredElement_511", "population")
 timeSeriesPopData <- as.data.table(expand.grid(geographicAreaM49 = unique(popData$geographicAreaM49),
                                                timePointYears = as.character(minYearToProcess:maxYearToProcess)))
 
-popData <- merge(timeSeriesPopData, popData, by = c("geographicAreaM49", "timePointYears"), all.x = T)
+popData <- merge(timeSeriesPopData, popData, by = c("geographicAreaM49", "timePointYears"), all.x = TRUE)
 
 popData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
@@ -317,7 +330,7 @@ setnames(foodDataUpTo1999, old = "Value", new = "food")
 setcolorder(foodDataUpTo1999, c("geographicAreaM49", "measuredElement", "measuredItemCPC",
                                 "food", "timePointYears", "flagObservationStatus", "flagMethod"))
 
-# Bind those data sets
+# Bind the two food data sets
 foodData <- rbind(foodDataUpTo1999, foodDataFrom2000)
 
 
@@ -337,7 +350,7 @@ foodData <- foodData[type %in% c("Food Estimate", "Food Residual")]
 
 keys <- c("flagObservationStatus", "flagMethod")
 
-foodDataMerge <- merge(foodData, flagValidTable, by = keys, all.x = T)
+foodDataMerge <- merge(foodData, flagValidTable, by = keys, all.x = TRUE)
 
 # Discussed in a meeting: change from M- to Mu
 foodDataMerge[flagObservationStatus == "M" & flagMethod == "-", flagMethod := "u"]
@@ -346,7 +359,7 @@ foodDataMerge[flagObservationStatus == "M" & flagMethod == "-", flagMethod := "u
 checkTotFood <- foodDataMerge[, list(totFood = sum(food)),
                              by = list(geographicAreaM49, timePointYears)]
 
-checkTotFood <- nameData("food", "fooddatafs", checkTotFood)
+# checkTotFood <- nameData("food", "fooddatafs", checkTotFood)
 # checkTotFood[totFood == 0, .N, c("geographicAreaM49", "geographicAreaM49_description")]
 # checkTotFood[timePointYears %in% referenceYearRange & totFood == 0, .N, geographicAreaM49]
 
@@ -401,7 +414,7 @@ totalTradeData[, netTrade := (imports - exports)]
 
 ## Let's merge timeseries and totalTradeData
 keys <- c("geographicAreaM49", "timePointYears", "measuredItemCPC")
-timeSeriesData <- merge(timeSeriesData, totalTradeData, by = keys, all.x = T)
+timeSeriesData <- merge(timeSeriesData, totalTradeData, by = keys, all.x = TRUE)
 timeSeriesData[is.na(netTrade), netTrade := 0]
 timeSeriesData[is.na(imports), imports := 0]
 timeSeriesData[is.na(exports), exports := 0]
@@ -431,36 +444,32 @@ selectYearsTab <- timeSeriesData[timePointYears %in% referenceYearRange]
 
 # If the figure is Protected in the reference year, we will not compute the food average for it
 
-selectYearsTab <- selectYearsTab[, protectedAux := ifelse(timePointYears == median(as.numeric(referenceYearRange)) &
-                                                              Protected == TRUE, 1, 0),
-                                 by = list(geographicAreaM49, measuredItemCPC)]
+selectYearsTab <-
+  selectYearsTab[,
+    protectedAux := ifelse(timePointYears == median(as.numeric(referenceYearRange)) & Protected == TRUE, 1, 0),
+    by = list(geographicAreaM49, measuredItemCPC)
+  ]
 
 selectYearsTab[is.na(protectedAux), protectedAux := 0]
 
-selectYearsTab[, aux := max(protectedAux, na.rm = T), by = list(geographicAreaM49, measuredItemCPC)]
+selectYearsTab[, aux := max(protectedAux, na.rm = TRUE), by = list(geographicAreaM49, measuredItemCPC)]
 
-selectYearsTabFoodEstimate = selectYearsTab[aux == 0 & type == "Food Estimate"]
+selectYearsTabFoodEstimate <- selectYearsTab[aux == 0 & type == "Food Estimate"]
 
 ## Computing food average
 averageYearTab <-
   selectYearsTabFoodEstimate[
     food > 0,
-    list(
-      foodAverage = mean(food, na.rm = T),
-      nObs = .N
-    ),
+    .(foodAverage = mean(food, na.rm = TRUE)),
     by = list(geographicAreaM49, measuredItemCPC)
+  ][,
+    `:=`(
+      timePointYears = as.character(referenceYear),
+      flagObservationStatus = "I",
+      flagMethod = "i",
+      Protected = FALSE
+    )
   ]
-
-## Let's exclude the country that is NaN for all the commodities
-averageYearTab <- nameData("food", "fooddatafs", averageYearTab)
-averageYearTab[, c("nObs", "geographicAreaM49_description", "measuredItemCPC_description") := NULL]
-averageYearTab <- averageYearTab[!foodAverage == "NaN"]
-averageYearTab[, timePointYears := referenceYear]
-averageYearTab[, timePointYears := as.character(timePointYears)]
-averageYearTab[, flagObservationStatus := "I"]
-averageYearTab[, flagMethod := "i"]
-averageYearTab[, Protected := FALSE]
 
 ## Food Residual -  compute netSupply
 selectYearsTabFoodResidual <- selectYearsTab[aux == 0 & type == "Food Residual"]
@@ -469,75 +478,79 @@ selectYearsTabFoodResidual <- selectYearsTab[aux == 0 & type == "Food Residual"]
 averageYearTabResidual <-
   selectYearsTabFoodResidual[
     netSupply > 0,
-    list(
-      netSupplyAverage = mean(netSupply, na.rm = T),
-      nObs = .N
-    ),
+    .(netSupplyAverage = mean(netSupply, na.rm = TRUE)),
     by = list(geographicAreaM49, measuredItemCPC)
+  ][,
+    `:=`(
+      timePointYears = as.character(referenceYear),
+      flagObservationStatus = "I",
+      flagMethod = "i",
+      Protected = FALSE
+    )
   ]
-
-numbItem <- length(unique(averageYearTabResidual$measuredItemCPC))
-tabCountryNan <- averageYearTabResidual[netSupplyAverage == "NaN", .N, geographicAreaM49]
-
-averageYearTabResidual[, timePointYears := referenceYear]
-averageYearTabResidual[, timePointYears := as.character(timePointYears)]
-averageYearTabResidual[, flagObservationStatus := "I"]
-averageYearTabResidual[, flagMethod := "i"]
-averageYearTabResidual[, Protected := FALSE]
 
 ## Merge averageYearTab with timeSeriesData
 keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
 
-timeSeriesData <- merge(timeSeriesData,
-                       averageYearTab[, c("geographicAreaM49", "measuredItemCPC", "timePointYears",
-                                          "foodAverage", "flagObservationStatus", "flagMethod"),
-                                      with =  F],
-                       by = keys, all.x = T)
+timeSeriesData <-
+  merge(
+    timeSeriesData,
+    averageYearTab[, c("geographicAreaM49", "measuredItemCPC", "timePointYears",
+                       "foodAverage", "flagObservationStatus", "flagMethod"), with =  FALSE],
+    by = keys,
+    all.x = TRUE
+  )
 
-timeSeriesData[is.na(foodAverage), finalFood := food]
-timeSeriesData[!is.na(foodAverage), finalFood := foodAverage]
+timeSeriesData[, finalFood := ifelse(is.na(foodAverage), food, foodAverage)]
+
 timeSeriesData[!is.na(flagObservationStatus.y), flagObservationStatus.x := flagObservationStatus.y]
 timeSeriesData[!is.na(flagMethod.y), flagMethod.x := flagMethod.y]
 
 timeSeriesData[, c("food", "foodAverage", "flagObservationStatus.y", "flagMethod.y") := NULL]
+
 setnames(timeSeriesData, old = c("finalFood", "flagObservationStatus.x", "flagMethod.x"),
          new = c("food", "flagObservationStatus", "flagMethod"))
 
 ## Merge averageYearTabResidual with timeSeriesData
 keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
 
-timeSeriesData <- merge(
+timeSeriesData <-
+  merge(
     timeSeriesData,
     averageYearTabResidual[, c("geographicAreaM49", "measuredItemCPC",
                                "timePointYears", "netSupplyAverage",
-                               "flagObservationStatus", "flagMethod"), with =  F],
-    by = keys, all.x = T)
+                               "flagObservationStatus", "flagMethod"), with =  FALSE],
+    by = keys,
+    all.x = TRUE
+  )
 
-timeSeriesData[is.na(netSupplyAverage), finalNetSupply := netSupply]
-timeSeriesData[!is.na(netSupplyAverage), finalNetSupply := netSupplyAverage]
+timeSeriesData[, finalNetSupply := ifelse(is.na(netSupplyAverage), netSupply, netSupplyAverage)]
 
 timeSeriesData[!is.na(flagObservationStatus.y), flagObservationStatus.x := flagObservationStatus.y]
 timeSeriesData[!is.na(flagMethod.y), flagMethod.x := flagMethod.y]
 
 timeSeriesData[, c("netSupply", "netSupplyAverage", "flagObservationStatus.y", "flagMethod.y") := NULL]
+
 setnames(timeSeriesData, old = c("finalNetSupply", "flagObservationStatus.x", "flagMethod.x"),
          new = c("netSupply", "flagObservationStatus", "flagMethod"))
 
 ## If the commodity is "Food Residual" and is not a protected figure, the amount of
 ## nettrade goes to food. But if nettrade is below zero, food is equal to zero.
 
-timeSeriesData[Protected == FALSE & type == "Food Residual" & netSupply > 0,
-               food := netSupply]
-
-timeSeriesData[Protected == FALSE & type == "Food Residual" & netSupply <= 0,
-               food := 0]
+timeSeriesData[
+  Protected == FALSE & type == "Food Residual",
+  food := ifelse(netSupply > 0, netSupply, 0)
+]
 
 ## Get initial food data for the commodities classified as a "Food Estimate" that don't
 ## have an initial food value in the reference year
 
-countryCommodityZeroReferenceYear <- timeSeriesData[food %in% c(0, NA) & timePointYears == referenceYear &
-                                                        type == "Food Estimate", .N,
-                                                    c("geographicAreaM49", "measuredItemCPC")]
+countryCommodityZeroReferenceYear <-
+  timeSeriesData[
+    food %in% c(0, NA) & timePointYears == referenceYear & type == "Food Estimate",
+    .N,
+    c("geographicAreaM49", "measuredItemCPC")
+  ]
 
 initialFoodData <- getInitialFoodValue(
     country = countryCommodityZeroReferenceYear$geographicAreaM49,
@@ -545,6 +558,7 @@ initialFoodData <- getInitialFoodValue(
     referenceYear = referenceYear,
     data = timeSeriesData
 )
+
 initialFoodData[, flagInitialFood := 1]
 
 # Exclude the commodities that are Estimate but the time series for food is always zero.
@@ -552,10 +566,16 @@ initialFoodData <- initialFoodData[source == "food" & timePointYears >= referenc
 
 initialFoodData[, timePointYears := as.character(timePointYears)]
 initialFoodData[, nrows := NULL]
+
 keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
-timeSeriesData <- merge(timeSeriesData,
-                        initialFoodData[, c(keys, "flagInitialFood"), with = F],
-                        by = keys, all.x = T)
+
+timeSeriesData <-
+  merge(
+    timeSeriesData,
+    initialFoodData[, c(keys, "flagInitialFood"), with = FALSE],
+    by = keys,
+    all.x = TRUE
+  )
 
 # Workaround
 timeSeriesData[!is.na(flagInitialFood), Protected := TRUE]
@@ -563,28 +583,39 @@ timeSeriesData[!is.na(flagInitialFood), Protected := TRUE]
 # Food Commodity
 funcCodes <- commodity2FunctionalForm(
     as.numeric(cpc2fcl(timeSeriesData$measuredItemCPC, returnFirst = TRUE)))
+
 timeSeriesData <- cbind(timeSeriesData, do.call("cbind", funcCodes))
+
 setkeyv(timeSeriesData, c("geographicAreaM49", "timePointYears"))
 
-cat("Food data downloaded with", nrow(foodData), "rows.\n")
 
 # Elasticity
 
 setnames(fdmData, old = c("Value_foodVariable_y_e", "foodFdm", "foodCommodityM"),
          new = c("elasticity", "foodDemand", "foodCommodity"))
 
-# Read map table from old code to new code
-oldToNewCommodity <- ReadDatatable("food_old_code_map")
 
-fdmData <- merge(fdmData, oldToNewCommodity, all.x = T, allow.cartesian = T,
-                 by.x="foodCommodity", by.y = "old_code")
+fdmData <-
+  merge(
+    fdmData,
+    oldToNewCommodity,
+    all.x = TRUE,
+    allow.cartesian = TRUE,
+    by.x = "foodCommodity",
+    by.y = "old_code"
+  )
+
 fdmData[is.na(new_code), new_code := foodCommodity]
 fdmData <- fdmData[foodCommodity != "2500"]
 fdmData[, c("foodCommodity") := NULL]
+
 setnames(fdmData, old=c("new_code"), new=c("foodCommodity"))
 
-fdmData <- fdmData[, list(elasticity = max(elasticity)),
-                   by=list(geographicAreaM49, foodDemand, foodFunction)]
+fdmData <-
+  fdmData[,
+    .(elasticity = max(elasticity)),
+    by = list(geographicAreaM49, foodDemand, foodFunction)
+  ]
 
 ## Merge the datasets together, and perform some processing.
 data <- merge(popData, gdpData, all = TRUE, by = c("geographicAreaM49", "timePointYears"))
@@ -600,8 +631,6 @@ data <- merge(data, fdmData,
               by = c("foodDemand", "geographicAreaM49"),
               all.x = TRUE)
 
-## Country income group
-countryIncomeGroup <- ReadDatatable("country_income_group")
 setnames(countryIncomeGroup,
          old = c("geographic_area_m49", "country_name", "country_code", "group_code", "income_group"),
          new = c("geographicAreaM49", "CountryName", "CountryCode", "GroupCode", "incomeGroup"))
@@ -609,8 +638,8 @@ setnames(countryIncomeGroup,
 ## We need to fill the gaps of the elasticity for the combination country/commodity
 
 key <- "geographicAreaM49"
-data <- merge(data, countryIncomeGroup[, c("geographicAreaM49", "incomeGroup"), with = F],
-             by = key, all.x = T)
+data <- merge(data, countryIncomeGroup[, c("geographicAreaM49", "incomeGroup"), with = FALSE],
+             by = key, all.x = TRUE)
 
 ## Take the elasticity average for each combination commodity/income group
 data[, foodFunctionAux := as.numeric(foodFunction)]
@@ -618,27 +647,27 @@ data[, foodFunctionAux := as.numeric(foodFunction)]
 elastAverage <-
   data[,
     list(
-      elasticityAverage = mean(elasticity, na.rm = T),
-      foodFunctionAux = round(mean(foodFunctionAux, na.rm = T))
+      elasticityAverage = mean(elasticity, na.rm = TRUE),
+      foodFunctionAux = round(mean(foodFunctionAux, na.rm = TRUE))
     ),
     by = list(measuredItemCPC, incomeGroup)
+  ][
+    !is.na(elasticityAverage)
+  ][,
+    foodFunctionAux := as.character(foodFunctionAux)
   ]
 
-elastAverage <- elastAverage[!is.na(elasticityAverage)]
-elastAverage[, foodFunctionAux := as.character(foodFunctionAux)]
 data[, "foodFunctionAux" := NULL]
 
 ## Merge elastAverage with data
 keys <- c("measuredItemCPC", "incomeGroup")
-data <- merge(data, elastAverage, by = keys, all.x = T)
+data <- merge(data, elastAverage, by = keys, all.x = TRUE)
 
 ## If elasticity is NA, we take the figure from elasticityAverage
 
-data[is.na(elasticity), updatedElast := elasticityAverage]
-data[!is.na(elasticity), updatedElast := elasticity]
+data[, updatedElast := ifelse(is.na(elasticity), elasticityAverage, eleasticity)]
 
-data[is.na(foodFunction), updatedFoodFunction := foodFunctionAux]
-data[!is.na(foodFunction), updatedFoodFunction := foodFunction]
+data[, updatedFoodFunction := ifelse(is.na(foodFunction), foodFunctionAux, foodFunction)]
 
 ## Analysing elasticity
 
@@ -646,9 +675,9 @@ tabSD <-
   data[
     timePointYears == referenceYear,
     list(
-      minUpdatedElast = min(updatedElast, na.rm = T),
-      averageUpdatedElast = mean(updatedElast, na.rm = T),
-      sdUpdatedElast = sd(updatedElast, na.rm = T)
+      minUpdatedElast = min(updatedElast, na.rm = TRUE),
+      averageUpdatedElast = mean(updatedElast, na.rm = TRUE),
+      sdUpdatedElast = sd(updatedElast, na.rm = TRUE)
     ),
     by = list(incomeGroup, measuredItemCPC)
   ]
@@ -660,14 +689,18 @@ tabSD[is.na(lowerTreshold), lowerTreshold := averageUpdatedElast]
 tabSD[is.na(upperTreshold), upperTreshold := averageUpdatedElast]
 
 data <- merge(data, tabSD[, c("incomeGroup", "measuredItemCPC", "lowerTreshold",
-                              "upperTreshold", "averageUpdatedElast"), with = F],
+                              "upperTreshold", "averageUpdatedElast"), with = FALSE],
               by = c("incomeGroup", "measuredItemCPC"))
 
-data[updatedElast > upperTreshold | updatedElast < lowerTreshold, flagOutlier := 1]
-data[!(updatedElast > upperTreshold | updatedElast < lowerTreshold), flagOutlier := 0]
-
-data[flagOutlier == 1, newElasticity := averageUpdatedElast]
-data[flagOutlier == 0, newElasticity := updatedElast]
+# If the condition is TRUE, it's an outlier
+data[,
+  newElasticity :=
+    ifelse(
+      updatedElast > upperTreshold | updatedElast < lowerTreshold,
+      averageUpdatedElast,
+      updatedElast
+    )
+]
 
 # The country/commodity that has no food classification will be classified as
 # "Food Estimate".
