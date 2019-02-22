@@ -609,7 +609,7 @@ fdmData[is.na(new_code), new_code := foodCommodity]
 fdmData <- fdmData[foodCommodity != "2500"]
 fdmData[, c("foodCommodity") := NULL]
 
-setnames(fdmData, old = c"new_code", new = "foodCommodity")
+setnames(fdmData, old = "new_code", new = "foodCommodity")
 
 fdmData <-
   fdmData[,
