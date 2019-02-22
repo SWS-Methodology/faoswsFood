@@ -171,14 +171,16 @@ foodKey <- DatasetKey(
 
 # Key for trade
 tradeCode <- c("5610", "5910")
-totalTradeKeySWS <- DatasetKey(
+totalTradeKey <- DatasetKey(
     domain = "trade",
     dataset = "total_trade_cpc_m49",
     dimensions = list(
         Dimension(name = "geographicAreaM49", keys = areaCodesM49),
         Dimension(name = "measuredElementTrade", keys = tradeCode),
         Dimension(name = "timePointYears", keys = yearCodes),
-        Dimension(name = "measuredItemCPC", keys = itemCodesCPC)
+        Dimension(name = "measuredItemCPC",
+                  keys = intersect(itemCodesCPC,
+                                   GetCodeList("trade", "total_trade_cpc_m49", "measuredItemCPC")$code))
     )
 )
 
@@ -189,8 +191,10 @@ productionKey <- DatasetKey(
     dimensions = list(
         Dimension(name = "geographicAreaM49", keys = areaCodesM49),
         Dimension(name = "measuredElement", keys = "5510"),
-        Dimension(name = "measuredItemCPC", keys = itemCodesCPC),
-        Dimension(name = "timePointYears", keys = yearCodes)
+        Dimension(name = "timePointYears", keys = yearCodes),
+        Dimension(name = "measuredItemCPC",
+                  keys = intersect(itemCodesCPC,
+                                   GetCodeList("agriculture", "aproduction", "measuredItemCPC")$code))
     )
 )
 
@@ -264,7 +268,7 @@ stopifnot(nrow(foodDataFrom2000) > 0)
 
 # Trade data
 
-totalTradeData <- GetData(totalTradeKeySWS, flags = FALSE)
+totalTradeData <- GetData(totalTradeKey, flags = FALSE)
 
 stopifnot(nrow(totalTradeData) > 0)
 
