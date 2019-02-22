@@ -146,7 +146,7 @@ dimVar <- Dimension(name = "foodVariable", keys = varCodes)
 ############################# Define the keys ######################
 
 # Keys for population
-detailskeyPop <- DatasetKey(domain = "population", dataset = "population_unpd",
+keyPop <- DatasetKey(domain = "population", dataset = "population_unpd",
                      dimensions = list(dimM49, dimPop, dimTime))
 
 ############# Currently not used
