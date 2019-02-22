@@ -662,7 +662,7 @@ data <- merge(data, elastAverage, by = keys, all.x = TRUE)
 
 ## If elasticity is NA, we take the figure from elasticityAverage
 
-data[, updatedElast := ifelse(is.na(elasticity), elasticityAverage, eleasticity)]
+data[, updatedElast := ifelse(is.na(elasticity), elasticityAverage, elasticity)]
 
 data[, updatedFoodFunction := ifelse(is.na(foodFunction), foodFunctionAux, foodFunction)]
 
