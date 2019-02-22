@@ -140,11 +140,6 @@ dimVar <- Dimension(name = "foodVariable", keys = varCodes)
 #dimItemGDP <- Dimension(name = "dim_item_fao_macro_ind", keys = gdpItemCode)
 #dimFood <- Dimension(name = "measuredElement", keys = foodCodes)
 
-## Define the pivots.  We won't need this for all dimensions, so we'll only
-## define the relevant ones.
-pivotM49 <- Pivoting(code = "geographicAreaM49")
-pivotPop <- Pivoting(code = "measuredElement")
-pivotTime <- Pivoting(code = "timePointYears")
 # Currently not used
 #pivotGDP <- Pivoting(code = "wbIndicator")
 
@@ -203,8 +198,7 @@ productionKey <- DatasetKey(
 
 # Population
 
-popData <- GetData(keyPop, flags = FALSE, normalized = FALSE,
-                   pivoting = c(pivotM49, pivotTime, pivotPop))
+popData <- GetData(keyPop, flags = FALSE)
 
 stopifnot(nrow(popData) > 0)
 
@@ -308,9 +302,7 @@ stopifnot(nrow(food_classification_country_specific) > 0)
 
 
 
-
-
-setnames(popData, "Value_measuredElement_511", "population")
+setnames(popData, "Value", "population")
 
 timeSeriesPopData <- as.data.table(expand.grid(geographicAreaM49 = unique(popData$geographicAreaM49),
                                                timePointYears = as.character(minYearToProcess:maxYearToProcess)))
