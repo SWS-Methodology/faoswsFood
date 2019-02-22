@@ -319,6 +319,12 @@ setnames(food_classification_country_specific,
          old = c("geographic_area_m49", "measured_item_cpc", "food_classification"),
          new = c("geographicAreaM49", "measuredItemCPC", "type"))
 
+setnames(fdmData, old = c("Value_foodVariable_y_e", "foodFdm", "foodCommodityM"),
+         new = c("elasticity", "foodDemand", "foodCommodity"))
+
+setnames(countryIncomeGroup,
+         old = c("geographic_area_m49", "country_name", "country_code", "group_code", "income_group"),
+         new = c("geographicAreaM49", "CountryName", "CountryCode", "GroupCode", "incomeGroup"))
 
 
 
@@ -588,9 +594,6 @@ setkeyv(timeSeriesData, c("geographicAreaM49", "timePointYears"))
 
 # Elasticity
 
-setnames(fdmData, old = c("Value_foodVariable_y_e", "foodFdm", "foodCommodityM"),
-         new = c("elasticity", "foodDemand", "foodCommodity"))
-
 
 fdmData <-
   merge(
@@ -606,7 +609,7 @@ fdmData[is.na(new_code), new_code := foodCommodity]
 fdmData <- fdmData[foodCommodity != "2500"]
 fdmData[, c("foodCommodity") := NULL]
 
-setnames(fdmData, old=c("new_code"), new=c("foodCommodity"))
+setnames(fdmData, old = c"new_code", new = "foodCommodity")
 
 fdmData <-
   fdmData[,
@@ -628,9 +631,6 @@ data <- merge(data, fdmData,
               by = c("foodDemand", "geographicAreaM49"),
               all.x = TRUE)
 
-setnames(countryIncomeGroup,
-         old = c("geographic_area_m49", "country_name", "country_code", "group_code", "income_group"),
-         new = c("geographicAreaM49", "CountryName", "CountryCode", "GroupCode", "incomeGroup"))
 
 ## We need to fill the gaps of the elasticity for the combination country/commodity
 
