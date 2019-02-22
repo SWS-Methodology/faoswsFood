@@ -5,7 +5,7 @@ suppressMessages({
     library(faoswsUtil)
     library(faoswsFood)
     library(faoswsFlag)
-    library(countrycode)
+    #library(countrycode)
     library(zoo)
 })
 
@@ -209,11 +209,11 @@ stopifnot(nrow(popData) > 0)
 
 gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
 gdp <- as.data.table(gdp)
-gdp[, geographicAreaM49 := as.character(countrycode(Country.Code, "iso3c", "iso3n"))]
+#gdp[, geographicAreaM49 := as.character(countrycode(Country.Code, "iso3c", "iso3n"))]
 gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
 gdp <- dplyr::filter(gdp,!is.na(geographicAreaM49))
-gdp <- dplyr::select(gdp,-Country.Name,-Country.Code,-Indicator.Name,-Indicator.Code)
+#gdp <- dplyr::select(gdp,-Country.Name,-Country.Code,-Indicator.Name,-Indicator.Code)
 gdp <- as.data.table(gdp)
 gdpData <- melt.data.table(gdp, id.vars = "geographicAreaM49")
 setnames(gdpData, "variable", "timePointYears")
