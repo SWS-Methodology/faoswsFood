@@ -61,7 +61,7 @@ referenceYearRange <- as.character(minReferenceYear:maxReferenceYear)
 minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYearToProcess), "1990",
                                       swsContext.computationParams$minYearToProcess))
 
-maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2016",
+maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2017",
                                       swsContext.computationParams$maxYearToProcess))
 
 if (minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess)
@@ -314,6 +314,9 @@ setnames(foodDataUpTo1999, old = "Value", new = "food")
 setnames(food_classification_country_specific,
          old = c("geographic_area_m49", "measured_item_cpc", "food_classification"),
          new = c("geographicAreaM49", "measuredItemCPC", "type"))
+
+
+
 
 timeSeriesPopData <- as.data.table(expand.grid(geographicAreaM49 = unique(popData$geographicAreaM49),
                                                timePointYears = as.character(minYearToProcess:maxYearToProcess)))
