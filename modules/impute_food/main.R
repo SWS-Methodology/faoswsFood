@@ -730,7 +730,7 @@ if (nrow(data) == 0){
                                                  referenceYear = referenceYear),
          by = list(geographicAreaM49, measuredItemCPC)]
 
-    data[, error := food - foodHat]
+    #data[, error := food - foodHat]
 
     dataToSave <- data[!is.na(foodHat)]
 
