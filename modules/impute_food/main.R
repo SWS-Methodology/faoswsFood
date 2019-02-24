@@ -136,13 +136,11 @@ dimCom <- Dimension(name = "foodCommodityM", keys = comCodes)
 dimFdm <- Dimension(name = "foodFdm", keys = fdmCodes)
 dimFun <- Dimension(name = "foodFunction", keys = funCodes)
 dimVar <- Dimension(name = "foodVariable", keys = varCodes)
+dimElementGDP <- Dimension(name = "dim_element_fao_macro_ind", keys = gdpElementCode)
+dimItemGDP <- Dimension(name = "dim_item_fao_macro_ind", keys = gdpItemCode)
 # Curently not used
-#dimElementGDP <- Dimension(name = "dim_element_fao_macro_ind", keys = gdpElementCode)
-#dimItemGDP <- Dimension(name = "dim_item_fao_macro_ind", keys = gdpItemCode)
-#dimFood <- Dimension(name = "measuredElement", keys = foodCodes)
-
-# Currently not used
 #pivotGDP <- Pivoting(code = "wbIndicator")
+#dimFood <- Dimension(name = "measuredElement", keys = foodCodes)
 
 ############################# Define the keys ######################
 
@@ -150,9 +148,9 @@ dimVar <- Dimension(name = "foodVariable", keys = varCodes)
 keyPop <- DatasetKey(domain = "population", dataset = "population_unpd",
                      dimensions = list(dimM49, dimPop, dimTime))
 
-############# Currently not used
-#keyGDP <- DatasetKey(domain = "faostat_datasets", dataset = "faostat_macro_ind",
-#                     dimensions = list(dimFaoCode, dimElementGDP, dimItemGDP, dimTime))
+# Keys for GDP
+keyGDP <- DatasetKey(domain = "faostat_datasets", dataset = "faostat_macro_ind",
+                     dimensions = list(dimFaoCode, dimElementGDP, dimItemGDP, dimTime))
 
 # Keys for food parameters
 keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
@@ -210,7 +208,40 @@ stopifnot(nrow(popData) > 0)
 
 # GDP
 
-# XXX: should use dataset/datatable
+# XXX: should use dataset/datatable. For now old data will be updated
+# with the groth rate of new data during last year.
+
+
+#@@@@@@@@@@@ "old"
+
+gdpData_old <- ReadDatatable("gdp_usd2010")
+
+stopifnot(nrow(gdpData_old) > 0)
+
+setnames(gdpData_old, old = c("geographic_area_m49", "time_point_years", "gdp_usd_2010"),
+         new = c("geographicAreaM49", "timePointYears", "GDP"))
+
+gdpData_old[, c("fao_name", "fao_code") := NULL]
+setcolorder(gdpData_old, c("geographicAreaM49", "timePointYears", "GDP"))
+gdpData_old[, geographicAreaM49 := as.character(geographicAreaM49)]
+gdpData_old[, timePointYears := as.character(timePointYears)]
+
+# There are no data for Taiwan. So we get this table from Taiwan website.
+gdp_taiwan <- ReadDatatable("gdp_taiwan_2005_prices")
+gdp_taiwan[, time_point_years := as.numeric(time_point_years)]
+setnames(gdp_taiwan, old = c("geographic_area_m49", "time_point_years", "gdp"),
+         new = c("geographicAreaM49", "timePointYears", "GDP"))
+
+gdp_taiwan = gdp_taiwan[timePointYears >= minYearToProcess & timePointYears <= maxYearToProcess]
+gdp_taiwan[, geographicAreaM49 := as.character(geographicAreaM49)]
+gdp_taiwan[, timePointYears := as.character(timePointYears)]
+
+# Including Taiwan
+gdpData_old <- rbind(gdpData_old, gdp_taiwan)
+gdpData_old[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+
+
+#@@@@@@@@@@@ "new"
 
 gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
 gdp <- as.data.table(gdp)
@@ -220,12 +251,12 @@ gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 gdp <- dplyr::filter(gdp,!is.na(geographicAreaM49))
 #gdp <- dplyr::select(gdp,-Country.Name,-Country.Code,-Indicator.Name,-Indicator.Code)
 gdp <- as.data.table(gdp)
-gdpData <- melt.data.table(gdp, id.vars = "geographicAreaM49")
-setnames(gdpData, "variable", "timePointYears")
-setnames(gdpData, "value", "GDP")
-gdpData <- as.data.frame(gdpData)
-gdpData$timePointYears = substr(gdpData$timePointYears,2,5)
-gdpData <- as.data.table(gdpData)
+gdpData_new <- melt.data.table(gdp, id.vars = "geographicAreaM49")
+setnames(gdpData_new, "variable", "timePointYears")
+setnames(gdpData_new, "value", "GDP")
+gdpData_new <- as.data.frame(gdpData_new)
+gdpData_new$timePointYears = substr(gdpData_new$timePointYears,2,5)
+gdpData_new <- as.data.table(gdpData_new)
 
 # There are no data for Taiwan. So we get this table from Taiwan website.
 gdp_taiwan <- ReadDatatable("gdp_taiwan_2005_prices")
@@ -239,11 +270,45 @@ gdp_taiwan <- gdp_taiwan[timePointYears >= minYearToProcess & timePointYears <= 
 gdp_taiwan[, geographicAreaM49 := as.character(geographicAreaM49)]
 gdp_taiwan[, timePointYears := as.character(timePointYears)]
 
-gdpData <- rbind(gdpData, gdp_taiwan)
+gdpData_new <- rbind(gdpData_new, gdp_taiwan)
 
-gdpData[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+gdpData_new[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
-stopifnot(nrow(gdpData) > 0)
+stopifnot(nrow(gdpData_new) > 0)
+
+
+#@@@@@@@@@@@ "old" + "new"
+
+gdpData_new <- gdpData_new[order(geographicAreaM49, timePointYears)]
+
+gdpData_new[, growth := GDP / shift(GDP), geographicAreaM49]
+
+# In the "new" data, Taiwan was not updated. Below it was updated by
+# inserting directly the "GDP Growht Rate (%)" found via query to:
+# http://statdb.dgbas.gov.tw/pxweb/dialog/statfile1L.asp
+
+gdpData_new <-
+  rbind(
+    gdpData_new,
+    data.table(geographicAreaM49 = "158", timePointYears = "2017",
+               GDP = NA_real_, growth = 1 + 3.08/100)
+  )
+
+gdpData <-
+  dplyr::full_join(
+    gdpData_old,
+    gdpData_new,
+    by = c("geographicAreaM49", "timePointYears"),
+    suffix = c("_old", "_new")
+  )
+
+setDT(gdpData)
+
+gdpData <- gdpData[order(geographicAreaM49, timePointYears)]
+
+gdpData[, GDP1 := ifelse(timePointYears == '2017', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+
+gdpData <- gdpData[, .(geographicAreaM49, timePointYears, GDP = GDP1)]
 
 
 # Food before 2000
@@ -737,24 +802,22 @@ if (nrow(data) == 0){
 
     ## Prepare data and save it to SWS
     cat("Restructure and filter data to save to SWS...\n")
+
     setnames(dataToSave, "foodHat", "Value")
+
     dataToSave[, measuredElement := "5141"]
-    dataToSave[Protected == FALSE, flagObservationStatus := "I"]
-    dataToSave[type == "Food Residual" & Protected == FALSE, flagMethod := "i"]
-    dataToSave[type == "Food Estimate" & Protected == FALSE, flagMethod := "e"]
 
-    dataToSave <- dataToSave[, c("geographicAreaM49", "measuredElement",
-                                 "measuredItemCPC", "timePointYears", "Value", "flagObservationStatus", "flagMethod", "Protected"),
+    dataToSave[
+      Protected == FALSE,
+      `:=`(
+        flagObservationStatus = "I",
+        flagMethod = ifelse(type == "Food Estimate", "e", "i") # else => residual
+      )
+    ]
+
+    dataToSave <- dataToSave[, c("timePointYears", "geographicAreaM49", "measuredItemCPC",
+                                 "measuredElement", "Value", "flagObservationStatus", "flagMethod"),
                              with = FALSE]
-
-    keys <- c("geographicAreaM49", "measuredElement",
-             "measuredItemCPC", "timePointYears")
-
-    dataToSave <- dataToSave[, "Protected" := NULL]
-
-    setcolorder(dataToSave,
-                c("timePointYears", "geographicAreaM49", "measuredItemCPC",
-                  "measuredElement", "Value", "flagObservationStatus", "flagMethod"))
 
     cat("Save the final data...\n")
 
