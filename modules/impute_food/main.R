@@ -67,7 +67,8 @@ maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYe
 if (minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess)
     stop("Please check the time range for the years to be processed")
 
-referenceYear <- floor(median(minYearToProcess:maxYearToProcess))
+# e.g.: 2012 for range 2011, 2012, 2013
+referenceYear <- floor(median(as.numeric(referenceYearRange)))
 
 yearCodes <- as.character(minYearToProcess:maxYearToProcess)
 
