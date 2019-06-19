@@ -19,7 +19,7 @@ if (CheckDebug()) {
     message("Not on server, so setting up environment...")
 
     library(faoswsModules)
-    SETTINGS <- ReadSettings("modules/impute_food/sws.yml")
+    SETTINGS <- ReadSettings("Modules/impute_food/sws.yml")
 
     # If you're not on the system, your settings will overwrite any others
     R_SWS_SHARE_PATH <- SETTINGS[["share"]]
@@ -72,6 +72,8 @@ referenceYear <- floor(median(as.numeric(referenceYearRange)))
 
 yearCodes <- as.character(minYearToProcess:maxYearToProcess)
 
+yearCodes_sua_unbalanced <- as.character(2000:maxYearToProcess)
+
 cat("Defining variables/dimensions/keys/...\n")
 
 ## Define the keys that we'll need for all the dimensions
@@ -93,7 +95,7 @@ completeImputationKey <- getCompleteImputationKey("food")
 
 # Use countries and cpcs from agriculture aproduction
 codesM49 <- GetCodeList('agriculture', 'aproduction', 'geographicAreaM49')[type == 'country', code]
-cpcItems <- GetCodeList("suafbs", "sua_validated_2015", "measuredItemFbsSua")[, code]
+cpcItems <- GetCodeList("suafbs", "sua_unbalanced", "measuredItemFbsSua")[, code]
 
 completeImputationKey@dimensions$geographicAreaM49@keys <- codesM49
 completeImputationKey@dimensions$measuredItemCPC@keys <- cpcItems
@@ -158,15 +160,19 @@ keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
 
 # Key for food
 foodKey <- DatasetKey(
-    domain = "suafbs",
-    dataset = "sua_validated_2015",
-    dimensions = list(
-        Dimension(name = "geographicAreaM49", keys = areaCodesM49),
-        Dimension(name = "measuredElementSuaFbs", keys = '5141'),
-        Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
-        Dimension(name = "timePointYears", keys = yearCodes)
-    )
+  domain = "suafbs",
+  dataset = "sua_unbalanced",
+  dimensions = list(
+    Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+    Dimension(name = "measuredElementSuaFbs", keys = '5141'),
+    Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
+    Dimension(name = "timePointYears", keys = yearCodes_sua_unbalanced)
+  )
 )
+
+
+
+
 
 # Key for trade
 tradeCode <- c("5610", "5910")
@@ -198,6 +204,7 @@ productionKey <- DatasetKey(
 )
 
 ############################# Get data ######################
+
 
 # Population
 
@@ -244,6 +251,8 @@ gdpData_old[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 #@@@@@@@@@@@ "new"
 
 gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
+
+# gdp<- read.csv("modules/Food Module/Data/GDP.csv")
 gdp <- as.data.table(gdp)
 #gdp[, geographicAreaM49 := as.character(countrycode(Country.Code, "iso3c", "iso3n"))]
 gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
@@ -369,6 +378,10 @@ stopifnot(nrow(countryIncomeGroup) > 0)
 food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
 
 stopifnot(nrow(food_classification_country_specific) > 0)
+
+
+#Sumeda : It decided to estimate all food items as "food estimate". 24/05/2019
+food_classification_country_specific[food_classification == "Food Residual", food_classification:= "Food Estimate"]
 
 
 ############### Set names
@@ -818,6 +831,9 @@ if (nrow(data) == 0){
     dataToSave <- dataToSave[, c("timePointYears", "geographicAreaM49", "measuredItemCPC",
                                  "measuredElement", "Value", "flagObservationStatus", "flagMethod"),
                              with = FALSE]
+    
+    
+    dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2017))
 
     cat("Save the final data...\n")
 
@@ -828,4 +844,8 @@ paste0("Food module completed successfully!!! ",
        stats$inserted, " observations written, ",
        stats$ignored, " weren't updated, ",
        stats$discarded, " had problems.")
+
+
+
+
 
