@@ -247,6 +247,8 @@ gdp_taiwan[, timePointYears := as.character(timePointYears)]
 gdpData_old <- rbind(gdpData_old, gdp_taiwan)
 gdpData_old[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
+setnames(gdpData_old, "GDP", "GDP_old")
+
 
 #@@@@@@@@@@@ "new"
 
