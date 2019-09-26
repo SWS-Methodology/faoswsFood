@@ -391,6 +391,12 @@ food_classification_country_specific[food_classification == "Food Residual", foo
 
 setnames(popData, "Value", "population")
 
+# Remove 1248, if it exists AND 156 exists
+if (identical(popData[geographicAreaM49 == "1248"][order(timePointYears)]$population,
+              popData[geographicAreaM49 == "156"][order(timePointYears)]$population)) {
+  popData <- popData[geographicAreaM49 != "156"]
+}
+
 setnames(foodDataFrom2000, old = c("measuredElementSuaFbs", "measuredItemFbsSua", "Value"),
          new = c("measuredElement", "measuredItemCPC", "food"))
 
@@ -838,6 +844,8 @@ if (nrow(data) == 0){
     dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2017))
 
     cat("Save the final data...\n")
+
+    saveRDS(dataToSave, "/tmp/dataToSave.rds")
 
     stats <- SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 180000)
 }
