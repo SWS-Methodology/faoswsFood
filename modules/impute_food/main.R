@@ -117,6 +117,8 @@ areaCodesM49 <- c("356",	"1248",	"586",	"50",	"231",	"360",	"180",	"834",	"608",
                   "862",	"562",	"178",	"12",	"686",	"694",	"120",	"218",	"762")
 
 
+
+
 # Exclude those codes
 areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
 
@@ -355,6 +357,23 @@ stopifnot(nrow(foodDataUpTo1999) > 0)
 foodDataFrom2000 <- GetData(foodKey, flags = TRUE)
 
 stopifnot(nrow(foodDataFrom2000) > 0)
+
+###################################################################################################################################################
+
+#Sumeda : 05/03/2020 As a temporary action we are deleting (E,f) food data from sua unbalance from 2014 to 2017 of 53 countries mentioned above. 
+#however, this will be a temporary action (Salar requested as we are re-validating 2014 -2017 apart 2018) 
+# (E,f) flags of these years (2014-2017) of  these 53 coutnries have been deleted in food domain as well.
+
+
+
+foodDataFrom2000[timePointYears %in% c(2014:2017) & flagObservationStatus == "E" &  flagMethod == "f",
+                 c("Value","flagObservationStatus","flagMethod") := NA]
+
+                                             
+
+
+
+##################################################################################################################################
 
 
 # Trade data
