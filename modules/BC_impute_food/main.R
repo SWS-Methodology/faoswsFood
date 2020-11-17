@@ -886,7 +886,7 @@ if (nrow(data) == 0){
                              with = FALSE]
     
     
-    dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2018))
+    dataToSave <- subset(dataToSave, timePointYears %in% c(2010:2013))
     
     cat("Save the final data...\n")
     
