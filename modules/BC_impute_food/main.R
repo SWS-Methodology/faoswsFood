@@ -44,10 +44,10 @@ if (CheckDebug()) {
 ## Use old trade data up to
 # endYearOldTrade = 2013
 
-minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minReferenceYear), "2011",
+minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minReferenceYear), "2013",
                                       swsContext.computationParams$minReferenceYear))
 
-maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxReferenceYear), "2013",
+maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxReferenceYear), "2015",
                                       swsContext.computationParams$maxReferenceYear))
 
 # referenceYear <- round(median(as.numeric(referenceYearRange)))
@@ -128,6 +128,11 @@ areaCodesM49<-setdiff(areaCodesM49,areaCodesM49_top_62)
 
 # Exclude those codes
 areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
+
+
+# #test for one country
+# areaCodesM49 <- c("654","792",  "788" ,   "784",    "780" ,   "776" ,   "772")
+# 
 
 ## The element 21 contains the FBS population numbers
 populationCodes <- "511"
@@ -268,9 +273,9 @@ setnames(gdpData_old, "GDP", "GDP_old")
 
 #@@@@@@@@@@@ "new"
 
-#gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
+gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
 
-gdp<-read.csv("GDP_2427927.csv")
+# gdp<-read.csv("GDP_2427927.csv")
 
 # gdp<- read.csv("Z:/wanner/gdp/GDP.csv")
 
