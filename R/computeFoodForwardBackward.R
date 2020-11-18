@@ -48,7 +48,7 @@ computeFoodForwardBackward <- function(food, pop, elas, gdp, netTrade, functiona
                 gdp_pc_t1 = as.numeric(gdp[i])
                 form = functionalForm[i]
                 
-                result[i] = center(form, food_t0, elas_t, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1)
+                result[i] = center_bc(form, food_t0, elas_t, gdp_pc_t0, gdp_pc_t1, pop_t0, pop_t1)
             } else {
                 stop("This is not currently implemented.")
             }

@@ -273,26 +273,33 @@ setnames(gdpData_old, "GDP", "GDP_old")
 
 #@@@@@@@@@@@ "new"
 
-gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
+# gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
 
 # gdp<-read.csv("GDP_2427927.csv")
 
 # gdp<- read.csv("Z:/wanner/gdp/GDP.csv")
 
 # gdp<- read.csv("modules/Food Module/Data/GDP.csv")
-gdp <- as.data.table(gdp)
+# gdp <- as.data.table(gdp)
 #gdp[, geographicAreaM49 := as.character(countrycode(Country.Code, "iso3c", "iso3n"))]
-gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+# gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
-gdp <- dplyr::filter(gdp,!is.na(geographicAreaM49))
+# gdp <- dplyr::filter(gdp,!is.na(geographicAreaM49))
 #gdp <- dplyr::select(gdp,-Country.Name,-Country.Code,-Indicator.Name,-Indicator.Code)
-gdp <- as.data.table(gdp)
-gdpData_new <- melt.data.table(gdp, id.vars = "geographicAreaM49")
-setnames(gdpData_new, "variable", "timePointYears")
-setnames(gdpData_new, "value", "GDP")
-gdpData_new <- as.data.frame(gdpData_new)
-gdpData_new$timePointYears = substr(gdpData_new$timePointYears,2,5)
-gdpData_new <- as.data.table(gdpData_new)
+# gdp <- as.data.table(gdp)
+# gdpData_new <- melt.data.table(gdp, id.vars = "geographicAreaM49")
+# setnames(gdpData_new, "variable", "timePointYears")
+# setnames(gdpData_new, "value", "GDP")
+# gdpData_new <- as.data.frame(gdpData_new)
+# gdpData_new$timePointYears = substr(gdpData_new$timePointYears,2,5)
+# gdpData_new <- as.data.table(gdpData_new)
+
+
+gdpData_new <- ReadDatatable("gdp_food_imputation")
+
+setnames(gdpData_new,names(gdpData_new),c("geographicAreaM49","timePointYears","GDP"))
+gdpData_new <- gdpData_new[!is.na(geographicAreaM49)]
+gdpData_new[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
 # There are no data for Taiwan. So we get this table from Taiwan website.
 gdp_taiwan <- ReadDatatable("gdp_taiwan_2005_prices")
@@ -309,6 +316,8 @@ gdp_taiwan[, timePointYears := as.character(timePointYears)]
 gdpData_new <- rbind(gdpData_new, gdp_taiwan)
 
 gdpData_new[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+
+gdpData_new[, GDP := as.numeric(GDP)]
 
 stopifnot(nrow(gdpData_new) > 0)
 
