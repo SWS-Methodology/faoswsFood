@@ -44,10 +44,10 @@ if (CheckDebug()) {
 ## Use old trade data up to
 # endYearOldTrade = 2013
 
-minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minReferenceYear), "2013",
+minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minReferenceYear), "2014",
                                       swsContext.computationParams$minReferenceYear))
 
-maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxReferenceYear), "2015",
+maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxReferenceYear), "2016",
                                       swsContext.computationParams$maxReferenceYear))
 
 # referenceYear <- round(median(as.numeric(referenceYearRange)))
@@ -118,12 +118,14 @@ itemCodesCPC <- selectedKey@dimensions$measuredItemCPC@keys
 
 # TOP 62 countries
 
-areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","148","170","178","180","218","231","320","324","332","340","356","360","364", 
-                "368","384","404","408","418","430","450","454","466","484","508","524","562","566","586","598","604","608","646","686","694","704","706", 
+areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","148","170","178","180","218","231","320","324","332","340","356","360","364",
+                "368","384","404","408","418","430","450","454","466","484","508","524","562","566","586","598","604","608","646","686","694","704","706",
                 "710","716","729","748","760","762","764","768","800","834","854","860","862","887","894","1248" )
 
 
-areaCodesM49<-setdiff(areaCodesM49,areaCodesM49_top_62)
+areaCodesM49 <-setdiff(areaCodesM49,areaCodesM49_top_62)
+
+# areaCodesM49 <- c(areaCodesM49,areaCodesM49_top_62)
 
 
 # Exclude those codes
@@ -131,7 +133,7 @@ areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
 
 
 # #test for one country
-# areaCodesM49 <- c("654","792",  "788" ,   "784",    "780" ,   "776" ,   "772")
+# areaCodesM49 <- c("654","792", "434")
 # 
 
 ## The element 21 contains the FBS population numbers
@@ -180,9 +182,20 @@ keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
                      dimensions = list(dimM49, dimCom, dimFdm, dimFun, dimVar))
 
 # Key for food
-foodKey <- DatasetKey(
+foodKey_unbalanced <- DatasetKey(
     domain = "suafbs",
     dataset = "sua_unbalanced",
+    dimensions = list(
+        Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+        Dimension(name = "measuredElementSuaFbs", keys = '5141'),
+        Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
+        Dimension(name = "timePointYears", keys = as.character(2000:2009))
+    )
+)
+
+foodKey <- DatasetKey(
+    domain = "suafbs",
+    dataset = "sua_balanced",
     dimensions = list(
         Dimension(name = "geographicAreaM49", keys = areaCodesM49),
         Dimension(name = "measuredElementSuaFbs", keys = '5141'),
@@ -190,7 +203,6 @@ foodKey <- DatasetKey(
         Dimension(name = "timePointYears", keys = yearCodes_sua_unbalanced)
     )
 )
-
 
 
 
@@ -374,12 +386,20 @@ foodDataUpTo1999 <- getFoodDataFAOSTAT1(areaCodesM49,
 
 stopifnot(nrow(foodDataUpTo1999) > 0)
 
-
+print("line 387")
 # Food data from 2000
 
-foodDataFrom2000 <- GetData(foodKey, flags = TRUE)
+foodDataFrom2000_2009 <- GetData(foodKey_unbalanced, flags = TRUE) # from sua unbalanced 2000 to 2009
+
+foodDataFrom2000 <- GetData(foodKey, flags = TRUE) # sua balanced from 2010 to date
+
+foodDataFrom2000 <- rbind(foodDataFrom2000_2009,foodDataFrom2000)
 
 stopifnot(nrow(foodDataFrom2000) > 0)
+
+
+
+
 
 ###################################################################################################################################################
 
@@ -389,8 +409,8 @@ stopifnot(nrow(foodDataFrom2000) > 0)
 
 
 
-foodDataFrom2000[timePointYears %in% c(2014:2017) & flagObservationStatus == "E" &  flagMethod == "f",
-                 c("Value","flagObservationStatus","flagMethod") := NA]
+foodDataFrom2000[timePointYears %in% c(2010:2013) & flagObservationStatus == "E" &  flagMethod == "f",
+                 c("Value","flagObservationStatus","flagMethod") := NA] #back compilation 
 
                                              
 
@@ -561,7 +581,7 @@ timeSeriesData[is.na(exports), exports := 0]
 
 ## Production
 
-
+print("line 582")
 productionData[, c("measuredElement", "flagObservationStatus", "flagMethod") := NULL]
 
 keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
@@ -632,6 +652,8 @@ averageYearTabResidual <-
 ## Merge averageYearTab with timeSeriesData
 keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
 
+print("line 653")
+
 timeSeriesData <-
     merge(
         timeSeriesData,
@@ -701,6 +723,9 @@ initialFoodData <- getInitialFoodValue(
 
 initialFoodData[, flagInitialFood := 1]
 
+
+print("line 725")
+
 # Exclude the commodities that are Estimate but the time series for food is always zero.
 initialFoodData <- initialFoodData[source == "food" & timePointYears >= referenceYear]
 
@@ -741,6 +766,8 @@ fdmData <-
         by.x = "foodCommodity",
         by.y = "old_code"
     )
+
+print("line 768")
 
 fdmData[is.na(new_code), new_code := foodCommodity]
 fdmData <- fdmData[foodCommodity != "2500"]
@@ -816,6 +843,9 @@ tabSD <-
         by = list(incomeGroup, measuredItemCPC)
         ]
 
+print("line 844")
+
+
 tabSD[, lowerTreshold := averageUpdatedElast - 2 * sdUpdatedElast]
 tabSD[, upperTreshold := averageUpdatedElast + 2 * sdUpdatedElast]
 
@@ -843,6 +873,8 @@ data[is.na(type), type := "Food Estimate"]
 #Sumeda : it is decided to use the simple linear model for the commodities that does not have a functional form. 04/03/2020
 data[,updatedFoodFunction := ifelse(is.na(updatedFoodFunction), 0, updatedFoodFunction)]
 
+
+print("line 875")
 
 if (nrow(data) == 0){
     warning("data has no rows, so the module is ending...  Are you sure there ",
