@@ -61,7 +61,7 @@ referenceYearRange <- as.character(minReferenceYear:maxReferenceYear)
 minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYearToProcess), "1990",
                                       swsContext.computationParams$minYearToProcess))
 
-maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2018",
+maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2019",
                                       swsContext.computationParams$maxYearToProcess))
 
 if (minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess)
@@ -123,9 +123,9 @@ areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","14
                 "710","716","729","748","760","762","764","768","800","834","854","860","862","887","894","1248" )
 
 
-areaCodesM49<-setdiff(areaCodesM49,areaCodesM49_top_62)
+# areaCodesM49<-setdiff(areaCodesM49,areaCodesM49_top_62)
 
-
+areaCodesM49 <- areaCodesM49_top_62
 # Exclude those codes
 areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
 
@@ -174,17 +174,45 @@ keyGDP <- DatasetKey(domain = "faostat_datasets", dataset = "faostat_macro_ind",
 keyFdm <- DatasetKey(domain = "food", dataset = "food_factors",
                      dimensions = list(dimM49, dimCom, dimFdm, dimFun, dimVar))
 
-# Key for food
-foodKey <- DatasetKey(
+
+
+
+# Key for food. From 2010 onward we decided to pull data from SUA Balanced.15/02/2021
+
+foodKey_unbalanced <- DatasetKey(
     domain = "suafbs",
     dataset = "sua_unbalanced",
     dimensions = list(
         Dimension(name = "geographicAreaM49", keys = areaCodesM49),
         Dimension(name = "measuredElementSuaFbs", keys = '5141'),
         Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
-        Dimension(name = "timePointYears", keys = yearCodes_sua_unbalanced)
+        Dimension(name = "timePointYears", keys = as.character(2000:2009))
     )
 )
+
+
+foodKey <- DatasetKey(
+    domain = "suafbs",
+    dataset = "sua_balanced",
+    dimensions = list(
+        Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+        Dimension(name = "measuredElementSuaFbs", keys = '5141'),
+        Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
+        Dimension(name = "timePointYears", keys = as.character(2010:maxYearToProcess))
+    )
+)
+
+
+# foodKey <- DatasetKey(
+#     domain = "suafbs",
+#     dataset = "sua_unbalanced",
+#     dimensions = list(
+#         Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+#         Dimension(name = "measuredElementSuaFbs", keys = '5141'),
+#         Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
+#         Dimension(name = "timePointYears", keys = yearCodes_sua_unbalanced)
+#     )
+# )
 
 
 
@@ -270,24 +298,30 @@ setnames(gdpData_old, "GDP", "GDP_old")
 
 #gdp <- read.csv(paste0(R_SWS_SHARE_PATH, "/wanner/gdp/","GDP.csv"))
 
-gdp<-read.csv("GDP_2427927.csv")
+# gdp<-read.csv("GDP_2427927.csv")
 
 # gdp<- read.csv("Z:/wanner/gdp/GDP.csv")
 
 # gdp<- read.csv("modules/Food Module/Data/GDP.csv")
-gdp <- as.data.table(gdp)
+# gdp <- as.data.table(gdp)
 #gdp[, geographicAreaM49 := as.character(countrycode(Country.Code, "iso3c", "iso3n"))]
-gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+# gdp[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
-gdp <- dplyr::filter(gdp,!is.na(geographicAreaM49))
+# gdp <- dplyr::filter(gdp,!is.na(geographicAreaM49))
 #gdp <- dplyr::select(gdp,-Country.Name,-Country.Code,-Indicator.Name,-Indicator.Code)
-gdp <- as.data.table(gdp)
-gdpData_new <- melt.data.table(gdp, id.vars = "geographicAreaM49")
-setnames(gdpData_new, "variable", "timePointYears")
-setnames(gdpData_new, "value", "GDP")
-gdpData_new <- as.data.frame(gdpData_new)
-gdpData_new$timePointYears = substr(gdpData_new$timePointYears,2,5)
-gdpData_new <- as.data.table(gdpData_new)
+# gdp <- as.data.table(gdp)
+# gdpData_new <- melt.data.table(gdp, id.vars = "geographicAreaM49")
+# setnames(gdpData_new, "variable", "timePointYears")
+# setnames(gdpData_new, "value", "GDP")
+# gdpData_new <- as.data.frame(gdpData_new)
+# gdpData_new$timePointYears = substr(gdpData_new$timePointYears,2,5)
+# gdpData_new <- as.data.table(gdpData_new)
+
+gdpData_new <- ReadDatatable("gdp_food_imputation")
+gdpData_new[,gdp := as.numeric(gdp)]
+setnames(gdpData_new,names(gdpData_new),c("geographicAreaM49","timePointYears","GDP"))
+gdpData_new <- gdpData_new[!is.na(geographicAreaM49)]
+gdpData_new[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 
 # There are no data for Taiwan. So we get this table from Taiwan website.
 gdp_taiwan <- ReadDatatable("gdp_taiwan_2005_prices")
@@ -321,7 +355,7 @@ gdpData_new[, growth := GDP / shift(GDP), geographicAreaM49]
 gdpData_new <-
     rbind(
         gdpData_new,
-        data.table(geographicAreaM49 = "158", timePointYears = c("2017","2018"),
+        data.table(geographicAreaM49 = "158", timePointYears = c("2017","2018","2019"),
                    GDP = NA_real_, growth = 1 + 3.08/100)
     )
 
@@ -343,8 +377,17 @@ gdpData[, GDP_old := ifelse(is.na(GDP_old) & !is.na(GDP1),GDP1 , GDP_old), .(geo
 
 gdpData[, GDP1 := ifelse(timePointYears == '2018', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
 
+#####for 2019
+gdpData[, GDP1 := ifelse(timePointYears == '2018', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+
+gdpData[, GDP_old := ifelse(is.na(GDP_old) & !is.na(GDP1),GDP1 , GDP_old), .(geographicAreaM49)]
+
+gdpData[, GDP1 := ifelse(timePointYears == '2019', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+
+
 
 gdpData <- gdpData[, .(geographicAreaM49, timePointYears, GDP = GDP1)]
+
 
 
 # Food before 2000
@@ -361,11 +404,22 @@ foodDataUpTo1999 <- getFoodDataFAOSTAT1(areaCodesM49,
 stopifnot(nrow(foodDataUpTo1999) > 0)
 
 
-# Food data from 2000
+# Food data from 2000. Data from 2010 to date will be pulled from sua balanced.
 
-foodDataFrom2000 <- GetData(foodKey, flags = TRUE)
+
+foodDataFrom2000_2009 <- GetData(foodKey_unbalanced, flags = TRUE) # from sua unbalanced 2000 to 2009
+
+foodDataFrom2000 <- GetData(foodKey, flags = TRUE) # sua balanced from 2010 to date
+
+foodDataFrom2000 <- rbind(foodDataFrom2000_2009,foodDataFrom2000)
 
 stopifnot(nrow(foodDataFrom2000) > 0)
+
+
+
+# foodDataFrom2000 <- GetData(foodKey, flags = TRUE)
+# 
+# stopifnot(nrow(foodDataFrom2000) > 0)
 
 ###################################################################################################################################################
 
@@ -374,11 +428,11 @@ stopifnot(nrow(foodDataFrom2000) > 0)
 # (E,f) flags of these years (2014-2017) of  these 53 coutnries have been deleted in food domain as well.
 
 
-
-foodDataFrom2000[timePointYears %in% c(2014:2017) & flagObservationStatus == "E" &  flagMethod == "f",
-                 c("Value","flagObservationStatus","flagMethod") := NA]
-
-                                             
+# 
+# foodDataFrom2000[timePointYears %in% c(2014:2017) & flagObservationStatus == "E" &  flagMethod == "f",
+#                  c("Value","flagObservationStatus","flagMethod") := NA]
+# 
+#                                              
 
 
 
@@ -477,6 +531,12 @@ foodData <- merge(
 foodData <- foodData[type %in% c("Food Estimate", "Food Residual")]
 
 keys <- c("flagObservationStatus", "flagMethod")
+
+
+#since we re-imputing again from 2014, the flag E,h from SUA Balanced must not be protected.
+#however, E,h flag is protected in flagValidTable. Hence , it is needed to change to FALSE. 
+
+flagValidTable <-flagValidTable[flagObservationStatus == "E" & flagMethod == "h", Protected := FALSE]
 
 foodDataMerge <- merge(foodData, flagValidTable, by = keys, all.x = TRUE)
 
@@ -703,7 +763,18 @@ timeSeriesData <-
         all.x = TRUE
     )
 
-# Workaround
+# Workaround. 
+#Since we are taking data from SUA Balanced , we come across with different flags such as E,- , E,h etc.
+#to avoid this, we assign the flag I,e for Protected FALSE. In the next step it assigns to protected TRUE to retain the 
+#initial food due to unavailability of  food in the reference years. 
+timeSeriesData[
+    flagInitialFood == 1 & Protected == FALSE,
+    `:=`(
+        flagObservationStatus = "I",
+        flagMethod = ifelse(type == "Food Estimate", "e", "i") # else => residual
+    )
+]
+
 timeSeriesData[!is.na(flagInitialFood), Protected := TRUE]
 
 # Food Commodity
@@ -876,17 +947,30 @@ if (nrow(data) == 0){
         )
         ]
     
+    
+    # dataToSave[
+    #     flagObservationStatus == "E" & flagMethod == "h",
+    #     `:=`(
+    #         flagObservationStatus = "I",
+    #         flagMethod = ifelse(type == "Food Estimate", "e", "i") # else => residual
+    #     )
+    # ]
+    
     dataToSave <- dataToSave[, c("timePointYears", "geographicAreaM49", "measuredItemCPC",
                                  "measuredElement", "Value", "flagObservationStatus", "flagMethod"),
                              with = FALSE]
     
     
-    dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2018))
+    dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2019))
     
     cat("Save the final data...\n")
-    
     stats <- SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 180000)
+    
 }
+
+# dataToSave <- subset(dataToSave, timePointYears %in% c(2019))
+
+
 
 paste0("Food module completed successfully!!! ",
        stats$inserted, " observations written, ",
