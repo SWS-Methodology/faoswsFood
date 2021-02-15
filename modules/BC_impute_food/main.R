@@ -512,6 +512,7 @@ foodData <- foodData[type %in% c("Food Estimate", "Food Residual")]
 
 keys <- c("flagObservationStatus", "flagMethod")
 
+#if data is taken from SUA Balanced keep it in mind that E,h is protected in flagValideTable. 
 foodDataMerge <- merge(foodData, flagValidTable, by = keys, all.x = TRUE)
 
 # Discussed in a meeting: change from M- to Mu
