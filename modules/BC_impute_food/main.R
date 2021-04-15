@@ -118,14 +118,28 @@ itemCodesCPC <- selectedKey@dimensions$measuredItemCPC@keys
 
 # TOP 62 countries
 
-areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","148","170","178","180","218","231","320","324","332","340","356","360","364",
-                "368","384","404","408","418","430","450","454","466","484","508","524","562","566","586","598","604","608","646","686","694","704","706",
-                "710","716","729","748","760","762","764","768","800","834","854","860","862","887","894","1248" )
-
-
-areaCodesM49 <-setdiff(areaCodesM49,areaCodesM49_top_62)
+# areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","148","170","178","180","218","231","320","324","332","340","356","360","364",
+#                 "368","384","404","408","418","430","450","454","466","484","508","524","562","566","586","598","604","608","646","686","694","704","706",
+#                 "710","716","729","748","760","762","764","768","800","834","854","860","862","887","894","1248" )
+#  
+# areaCodesM49 <-setdiff(areaCodesM49,areaCodesM49_top_62)
 
 # areaCodesM49 <- c(areaCodesM49,areaCodesM49_top_62)
+
+
+#all countries
+
+areaCodesM49 <-  c("4","8","12","24","28","32",
+"51","36","40","31","44","50","52","112","56","84","204","68","70","72","76","100","854","108","116","120","124","132",
+"140","148","152","158","344","446","1248","170","174","178","180","188","384","191","192","196","203","208","262",
+"212","214","218","818","222","233","748","231","242","246","250","258","266","270","268","276","288","300","308",
+"320","324","624","328","332","340","348","352","356","360","364","368","372","376","380","388","392",
+"400","398","404","296","408","410","414","417","418","428","422","426","430","434","440","442","450","454",
+"458","462","466","470","478","480","484","498","496","499","504","508","104","516","524","528","540","554","558",
+"562","566","807","578","512","586","275","591","598","600","604","608","616","620","642","643","646","659","662",
+"882","678","682","686","688","690","694","703","705","90","706","710","724","144","670","729","740","752","756",
+"760","762","834","764","626","768","780","788","792","795","800","804","784","826","840","858","860","548","862",
+"704","887","894","716")
 
 
 # Exclude those codes
@@ -200,7 +214,7 @@ foodKey <- DatasetKey(
         Dimension(name = "geographicAreaM49", keys = areaCodesM49),
         Dimension(name = "measuredElementSuaFbs", keys = '5141'),
         Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
-        Dimension(name = "timePointYears", keys = yearCodes_sua_unbalanced)
+        Dimension(name = "timePointYears", keys = as.character(2010:maxYearToProcess))
     )
 )
 
@@ -433,7 +447,7 @@ productionData <- GetData(productionKey, flags = TRUE)
 stopifnot(nrow(productionData) > 0)
 
 
-# Elasticities & co.
+# Elasticities & co.Two m49 158 , 512 are missing
 
 fdmData <- GetData(keyFdm, flags = FALSE, normalized = FALSE)
 
@@ -513,6 +527,12 @@ foodData <- foodData[type %in% c("Food Estimate", "Food Residual")]
 keys <- c("flagObservationStatus", "flagMethod")
 
 #if data is taken from SUA Balanced keep it in mind that E,h is protected in flagValideTable. 
+# E,h flag is protected in flagValidTable. Hence , it is needed to change to FALSE. 
+
+flagValidTable <-flagValidTable[flagObservationStatus == "E" & flagMethod == "h", Protected := FALSE]
+
+
+
 foodDataMerge <- merge(foodData, flagValidTable, by = keys, all.x = TRUE)
 
 # Discussed in a meeting: change from M- to Mu
