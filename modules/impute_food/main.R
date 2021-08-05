@@ -119,13 +119,28 @@ itemCodesCPC <- selectedKey@dimensions$measuredItemCPC@keys
 # TOP 62 countries
 
 areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","148","170","178","180","218","231","320","324","332","340","356","360","364", 
-                "368","384","404","408","418","430","450","454","466","484","508","524","562","566","586","598","604","608","646","686","694","704","706", 
+                "368","384","404","408","418","430","450","454","466","484","496","508","524","562","566","586","598","604","608","646","686","694","704","706", 
                 "710","716","729","748","760","762","764","768","800","834","854","860","862","887","894","1248" )
 
 
 # areaCodesM49<-setdiff(areaCodesM49,areaCodesM49_top_62)
 
-areaCodesM49 <- areaCodesM49_top_62
+#After removing top 63 countries from all countries 
+
+
+areaCodesM49_118 <- c("8","28","32","51","36","40","31","44","52","112","56","84","204","70","72","76","100",
+                    "108","124","132","152","158","344","446","174","188","191","192","196","203","208","262",
+                     "212","214","818","222","233","242","246","250","258","266","270","268","276","288","300",
+                     "308","624","328","348","352","372","376","380","388","392","400","398","296","410","414",
+                     "417","428","422","426","434","440","442","458","462","470","478","480","498","499","504",
+                     "516","528","540","554","558","807","578","512","275","591","600","616","620","642","643",
+                     "659","662","882","678","682","688","690","703","705","90","724","670","740","752","756","626",
+                     "780","788","792","795","804","784","826","840","858","548")
+
+
+
+
+areaCodesM49 <- areaCodesM49_118
 # Exclude those codes
 areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
 
@@ -478,7 +493,7 @@ food_classification_country_specific <- ReadDatatable("food_classification_count
 stopifnot(nrow(food_classification_country_specific) > 0)
 
 
-#Sumeda : It decided to estimate all food items as "food estimate". 24/05/2019
+#Sumeda : It is decided to estimate all food items as "food estimate". 24/05/2019
 food_classification_country_specific[food_classification == "Food Residual", food_classification:= "Food Estimate"]
 food_classification_country_specific <- food_classification_country_specific[!geographic_area_m49 == "\\N"]
 
@@ -961,7 +976,7 @@ if (nrow(data) == 0){
                              with = FALSE]
     
     
-    dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2019))
+    dataToSave <- subset(dataToSave, timePointYears %in% c(2019))
     
     cat("Save the final data...\n")
     stats <- SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 180000)
