@@ -44,10 +44,10 @@ if (CheckDebug()) {
 ## Use old trade data up to
 # endYearOldTrade = 2013
 
-minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minReferenceYear), "2011",
+minReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$minReferenceYear), "2014",
                                       swsContext.computationParams$minReferenceYear))
 
-maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxReferenceYear), "2013",
+maxReferenceYear <- as.numeric(ifelse(is.null(swsContext.computationParams$maxReferenceYear), "2016",
                                       swsContext.computationParams$maxReferenceYear))
 
 # referenceYear <- round(median(as.numeric(referenceYearRange)))
@@ -61,7 +61,7 @@ referenceYearRange <- as.character(minReferenceYear:maxReferenceYear)
 minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYearToProcess), "1990",
                                       swsContext.computationParams$minYearToProcess))
 
-maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2019",
+maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2020",
                                       swsContext.computationParams$maxYearToProcess))
 
 if (minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess)
@@ -118,9 +118,9 @@ itemCodesCPC <- selectedKey@dimensions$measuredItemCPC@keys
 
 # TOP 62 countries
 
-areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","148","170","178","180","218","231","320","324","332","340","356","360","364", 
-                "368","384","404","408","418","430","450","454","466","484","496","508","524","562","566","586","598","604","608","646","686","694","704","706", 
-                "710","716","729","748","760","762","764","768","800","834","854","860","862","887","894","1248" )
+areaCodesM49_top_63<-c("4","12","24","50","68","104","116","120","140","144","148","170","178","180","218","231","320","324","332","340","356","360","364", 
+                       "368","384","404","408","418","430","450","454","466","484","496","508","524","562","566","586","598","604","608","646","686","694","704","706", 
+                       "710","716","729","748","760","762","764","768","800","834","854","860","862","887","894","1248" )
 
 
 # areaCodesM49<-setdiff(areaCodesM49,areaCodesM49_top_62)
@@ -129,18 +129,18 @@ areaCodesM49_top_62<-c("4","12","24","50","68","104","116","120","140","144","14
 
 
 areaCodesM49_118 <- c("8","28","32","51","36","40","31","44","52","112","56","84","204","70","72","76","100",
-                    "108","124","132","152","158","344","446","174","188","191","192","196","203","208","262",
-                     "212","214","818","222","233","242","246","250","258","266","270","268","276","288","300",
-                     "308","624","328","348","352","372","376","380","388","392","400","398","296","410","414",
-                     "417","428","422","426","434","440","442","458","462","470","478","480","498","499","504",
-                     "516","528","540","554","558","807","578","512","275","591","600","616","620","642","643",
-                     "659","662","882","678","682","688","690","703","705","90","724","670","740","752","756","626",
-                     "780","788","792","795","804","784","826","840","858","548")
+                      "108","124","132","152","158","344","446","174","188","191","192","196","203","208","262",
+                      "212","214","818","222","233","242","246","250","258","266","270","268","276","288","300",
+                      "308","624","328","348","352","372","376","380","388","392","400","398","296","410","414",
+                      "417","428","422","426","434","440","442","458","462","470","478","480","498","499","504",
+                      "516","528","540","554","558","807","578","512","275","591","600","616","620","642","643",
+                      "659","662","882","678","682","688","690","703","705","90","724","670","740","752","756","626",
+                      "780","788","792","795","804","784","826","840","858","548")
 
 
 
 
-areaCodesM49 <- areaCodesM49_118
+areaCodesM49 <- c(areaCodesM49_118,areaCodesM49_top_63)
 # Exclude those codes
 areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
 
@@ -206,16 +206,42 @@ foodKey_unbalanced <- DatasetKey(
 )
 
 
-foodKey <- DatasetKey(
+# We have decided to pull from production domain from 2014. Hence, 2010-2013 will be based on SUA Balanced and 2014-2020 will be based on 
+#production domain. And Finally 1990-1999 from FAOSTAT and 2000-2009 from SUA Unbalanced. 
+
+#summary 
+# 1990 -1999 - FAOSTAT
+# 2000-2009 - SUA Unbalanced 
+# 2010-2013 - SUA Balanced 
+# 2014-2020 - Production. 
+
+foodKey_balanced <- DatasetKey(
     domain = "suafbs",
     dataset = "sua_balanced",
     dimensions = list(
         Dimension(name = "geographicAreaM49", keys = areaCodesM49),
         Dimension(name = "measuredElementSuaFbs", keys = '5141'),
         Dimension(name = "measuredItemFbsSua", keys = itemCodesCPC),
-        Dimension(name = "timePointYears", keys = as.character(2010:maxYearToProcess))
+        Dimension(name = "timePointYears", keys = as.character(2010:2013))
     )
 )
+
+foodKey_production<- DatasetKey(
+    domain = "agriculture",
+    dataset = "aproduction",
+    dimensions = list(
+        Dimension(name = "geographicAreaM49", keys = areaCodesM49),
+        Dimension(name = "measuredElement", keys = '5141'),
+        Dimension(name = "measuredItemCPC", keys = intersect(itemCodesCPC,
+GetCodeList("agriculture", "aproduction", "measuredItemCPC")$code)),
+        Dimension(name = "timePointYears", keys = as.character(2014:maxYearToProcess))
+    )
+)
+
+# keys = intersect(itemCodesCPC,
+#                  GetCodeList("agriculture", "aproduction", "measuredItemCPC")$code)
+# 
+
 
 
 # foodKey <- DatasetKey(
@@ -332,11 +358,23 @@ setnames(gdpData_old, "GDP", "GDP_old")
 # gdpData_new$timePointYears = substr(gdpData_new$timePointYears,2,5)
 # gdpData_new <- as.data.table(gdpData_new)
 
+
+#From 2018 , the GDP will be in terms of 2015 constant , NOT 2010 constant. 
 gdpData_new <- ReadDatatable("gdp_food_imputation")
 gdpData_new[,gdp := as.numeric(gdp)]
 setnames(gdpData_new,names(gdpData_new),c("geographicAreaM49","timePointYears","GDP"))
 gdpData_new <- gdpData_new[!is.na(geographicAreaM49)]
 gdpData_new[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+
+
+#Extracting only until 2017 (We consider 2010 constant value until 2017). 2017 is hard coded, since the decsion is made to use 
+# constant US 2015 from year 2018. 
+
+gdpData_new <- gdpData_new[timePointYears %in%  min( unique(gdpData_new$timePointYears)):2017 ]
+
+
+
+
 
 # There are no data for Taiwan. So we get this table from Taiwan website.
 gdp_taiwan <- ReadDatatable("gdp_taiwan_2005_prices")
@@ -357,6 +395,8 @@ gdpData_new[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 stopifnot(nrow(gdpData_new) > 0)
 
 
+
+
 #@@@@@@@@@@@ "old" + "new"
 
 gdpData_new <- gdpData_new[order(geographicAreaM49, timePointYears)]
@@ -370,7 +410,7 @@ gdpData_new[, growth := GDP / shift(GDP), geographicAreaM49]
 gdpData_new <-
     rbind(
         gdpData_new,
-        data.table(geographicAreaM49 = "158", timePointYears = c("2017","2018","2019"),
+        data.table(geographicAreaM49 = "158", timePointYears = c("2017"),
                    GDP = NA_real_, growth = 1 + 3.08/100)
     )
 
@@ -386,23 +426,48 @@ setDT(gdpData)
 
 gdpData <- gdpData[order(geographicAreaM49, timePointYears)]
 
-gdpData[, GDP1 := ifelse(timePointYears == '2017', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+
+
+gdpData[, GDP1 := ifelse(timePointYears == '2017' , shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
 
 gdpData[, GDP_old := ifelse(is.na(GDP_old) & !is.na(GDP1),GDP1 , GDP_old), .(geographicAreaM49)]
 
-gdpData[, GDP1 := ifelse(timePointYears == '2018', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+# gdpData[, GDP1 := ifelse(timePointYears == '2018', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
 
-#####for 2019
-gdpData[, GDP1 := ifelse(timePointYears == '2018', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+# #####for 2019
+# gdpData[, GDP1 := ifelse(timePointYears == '2018', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
 
-gdpData[, GDP_old := ifelse(is.na(GDP_old) & !is.na(GDP1),GDP1 , GDP_old), .(geographicAreaM49)]
+# gdpData[, GDP_old := ifelse(is.na(GDP_old) & !is.na(GDP1),GDP1 , GDP_old), .(geographicAreaM49)]
 
-gdpData[, GDP1 := ifelse(timePointYears == '2019', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+# gdpData[, GDP1 := ifelse(timePointYears == '2019', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
 
+
+# #####for 2019
+# gdpData[, GDP1 := ifelse(timePointYears == '2019', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
+
+# gdpData[, GDP_old := ifelse(is.na(GDP_old) & !is.na(GDP1),GDP1 , GDP_old), .(geographicAreaM49)]
+
+# gdpData[, GDP1 := ifelse(timePointYears == '2019', shift(GDP_old) * growth, GDP_old), .(geographicAreaM49)]
 
 
 gdpData <- gdpData[, .(geographicAreaM49, timePointYears, GDP = GDP1)]
 
+
+#Bind gdp constant 2015 data from year 2018 to the "gdpData" dataframe ; Decided 25/01/2022
+
+
+gdp_constant_2015 <- ReadDatatable("gdp_food_imputation_2015_cons")
+
+gdp_constant_2015[, gdp := as.numeric(gdp)]
+
+setnames(gdp_constant_2015,c("geographicaream49","timepointyears","gdp"),c("geographicAreaM49","timePointYears","GDP"))
+
+#GDP must be converted in millions 
+
+gdp_constant_2015 <- gdp_constant_2015[, GDP := GDP/10^6]
+
+
+gdpData <- rbind(gdpData,gdp_constant_2015)
 
 
 # Food before 2000
@@ -424,9 +489,18 @@ stopifnot(nrow(foodDataUpTo1999) > 0)
 
 foodDataFrom2000_2009 <- GetData(foodKey_unbalanced, flags = TRUE) # from sua unbalanced 2000 to 2009
 
-foodDataFrom2000 <- GetData(foodKey, flags = TRUE) # sua balanced from 2010 to date
+foodDataFrom2000 <- GetData(foodKey_balanced, flags = TRUE) # sua balanced from 2010 to 2013
 
 foodDataFrom2000 <- rbind(foodDataFrom2000_2009,foodDataFrom2000)
+
+
+
+
+foodDatafrom2014 <- GetData(foodKey_production) # from production domain 2014 to date
+
+setnames(foodDatafrom2014,c("measuredElement","measuredItemCPC"),c("measuredElementSuaFbs","measuredItemFbsSua"))
+
+foodDataFrom2000 <-rbind(foodDataFrom2000,foodDatafrom2014)
 
 stopifnot(nrow(foodDataFrom2000) > 0)
 
@@ -788,7 +862,7 @@ timeSeriesData[
         flagObservationStatus = "I",
         flagMethod = ifelse(type == "Food Estimate", "e", "i") # else => residual
     )
-]
+    ]
 
 timeSeriesData[!is.na(flagInitialFood), Protected := TRUE]
 
@@ -945,7 +1019,11 @@ if (nrow(data) == 0){
     
     #data[, error := food - foodHat]
     
-    dataToSave <- data[!is.na(foodHat)]
+    # dataToSave <- data[!is.na(foodHat)]
+    
+    dataToSave <- copy(data)
+    
+    
     
     ## Prepare data and save it to SWS
     cat("Restructure and filter data to save to SWS...\n")
@@ -962,6 +1040,9 @@ if (nrow(data) == 0){
         )
         ]
     
+    dataToSave <- dataToSave[, flagObservationStatus := ifelse(is.na(Value), NA, flagObservationStatus)]
+    dataToSave <- dataToSave[, flagMethod := ifelse(is.na(Value), NA, flagMethod)]
+    
     
     # dataToSave[
     #     flagObservationStatus == "E" & flagMethod == "h",
@@ -976,10 +1057,10 @@ if (nrow(data) == 0){
                              with = FALSE]
     
     
-    dataToSave <- subset(dataToSave, timePointYears %in% c(2019))
+    dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2020))
     
     cat("Save the final data...\n")
-    stats <- SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 180000)
+    stats <- SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 18000)
     
 }
 
