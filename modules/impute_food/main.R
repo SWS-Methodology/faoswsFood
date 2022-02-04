@@ -146,7 +146,7 @@ areaCodesM49_118 <- c("8","28","32","51","36","40","31","44","52","112","56","84
 
 areaCodesM49 <- c("530","96","60","728") # missing geo codes 
 
-# check in classification table if Guana has rice (it does not have. Entered Manually). Have a look if rice has official values . Beca
+# check in classification table if Guyana and Brunei (96) have rice (it does not have. Entered Manually). Have a look if rice has official values. 
 
 # Exclude those codes
 areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
