@@ -570,7 +570,7 @@ stopifnot(nrow(countryIncomeGroup) > 0)
 
 # Read the food_classification table
 
-#### Add Taro (01550) as food estimate to Eithopia (M49 231) ########################
+#### Add Taro (01550) as food estimate to Ethiopia (M49 231) ########################
 ###### Requested By Giulia 
 
 food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
