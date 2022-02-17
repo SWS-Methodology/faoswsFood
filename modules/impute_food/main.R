@@ -142,9 +142,9 @@ areaCodesM49_118 <- c("8","28","32","51","36","40","31","44","52","112","56","84
 
 
 
-# areaCodesM49 <- c(areaCodesM49_118,areaCodesM49_top_63)
+areaCodesM49 <- c(areaCodesM49_118,areaCodesM49_top_63)
 
-areaCodesM49 <- c("530","96","60","728") # missing geo codes 
+
 
 # check in classification table if Guyana and Brunei (96) have rice (it does not have. Entered Manually). Have a look if rice has official values. 
 
@@ -569,6 +569,10 @@ stopifnot(nrow(countryIncomeGroup) > 0)
 
 
 # Read the food_classification table
+
+#### Add Taro (01550) as food estimate to Eithopia (M49 231) ########################
+###### Requested By Giulia 
+
 food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
 
 stopifnot(nrow(food_classification_country_specific) > 0)
