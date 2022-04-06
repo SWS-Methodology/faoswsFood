@@ -151,6 +151,9 @@ areaCodesM49 <- c(areaCodesM49_118,areaCodesM49_top_63)
 # Exclude those codes
 areaCodesM49 <- areaCodesM49[!(areaCodesM49 %in% c("831", "832"))]
 
+areaCodesM49 <- areaCodesM49_118
+
+
 ## The element 21 contains the FBS population numbers
 populationCodes <- "511"
 ## The element 141 contains the FBS food numbers
@@ -573,14 +576,14 @@ stopifnot(nrow(countryIncomeGroup) > 0)
 #### Add Taro (01550) as food estimate to Ethiopia (M49 231) ########################
 ###### Requested By Giulia 
 
-food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
-
-stopifnot(nrow(food_classification_country_specific) > 0)
+# food_classification_country_specific <- ReadDatatable("food_classification_country_specific")
+# 
+# stopifnot(nrow(food_classification_country_specific) > 0)
 
 
 #Sumeda : It is decided to estimate all food items as "food estimate". 24/05/2019
-food_classification_country_specific[food_classification == "Food Residual", food_classification:= "Food Estimate"]
-food_classification_country_specific <- food_classification_country_specific[!geographic_area_m49 == "\\N"]
+# food_classification_country_specific[food_classification == "Food Residual", food_classification:= "Food Estimate"]
+# food_classification_country_specific <- food_classification_country_specific[!geographic_area_m49 == "\\N"]
 
 ############### Set names
 
@@ -592,9 +595,9 @@ setnames(foodDataFrom2000, old = c("measuredElementSuaFbs", "measuredItemFbsSua"
 
 setnames(foodDataUpTo1999, old = "Value", new = "food")
 
-setnames(food_classification_country_specific,
-         old = c("geographic_area_m49", "measured_item_cpc", "food_classification"),
-         new = c("geographicAreaM49", "measuredItemCPC", "type"))
+# setnames(food_classification_country_specific,
+#          old = c("geographic_area_m49", "measured_item_cpc", "food_classification"),
+#          new = c("geographicAreaM49", "measuredItemCPC", "type"))
 
 setnames(fdmData, old = c("Value_foodVariable_y_e", "foodFdm", "foodCommodityM"),
          new = c("elasticity", "foodDemand", "foodCommodity"))
@@ -622,13 +625,13 @@ setcolorder(foodDataUpTo1999, c("geographicAreaM49", "measuredElement", "measure
 foodData <- rbind(foodDataUpTo1999, foodDataFrom2000)
 
 
-foodData <- merge(
-    foodData,
-    food_classification_country_specific,
-    by = c("geographicAreaM49", "measuredItemCPC"),
-    all.x = TRUE)
+# foodData <- merge(
+#     foodData,
+#     food_classification_country_specific,
+#     by = c("geographicAreaM49", "measuredItemCPC"),
+#     all.x = TRUE)
 
-foodData <- foodData[type %in% c("Food Estimate", "Food Residual")]
+foodData[,type := "Food Estimate"]
 
 keys <- c("flagObservationStatus", "flagMethod")
 
@@ -661,20 +664,20 @@ timeSeriesData <- as.data.table(expand.grid(timePointYears = as.character(minYea
                                             geographicAreaM49 = unique(foodDataMerge$geographicAreaM49),
                                             measuredItemCPC = unique(foodDataMerge$measuredItemCPC)))
 
-timeSeriesData <-
-    merge(
-        timeSeriesData,
-        food_classification_country_specific,
-        by = c("geographicAreaM49", "measuredItemCPC"),
-        all.x = TRUE
-    )
+# timeSeriesData <-
+#     merge(
+#         timeSeriesData,
+#         food_classification_country_specific,
+#         by = c("geographicAreaM49", "measuredItemCPC"),
+#         all.x = TRUE
+#     )
 
 timeSeriesData <-
     merge(
         timeSeriesData,
         foodDataMerge,
         all.x = TRUE,
-        by = c("geographicAreaM49", "timePointYears", "measuredItemCPC", "type")
+        by = c("geographicAreaM49", "timePointYears", "measuredItemCPC")
     )
 
 timeSeriesData[, measuredElement := "5141"]
@@ -725,6 +728,9 @@ setnames(timeSeriesData, "Value", "production")
 timeSeriesData[is.na(production), production := 0]
 timeSeriesData[, netSupply := netTrade + production]
 
+
+timeSeriesData[is.na(type), type := "Food Estimate"]
+
 ## Preparing the dataset for computing average for food and net supply (production, imports and exports)
 selectYearsTab <- timeSeriesData[timePointYears %in% referenceYearRange]
 
@@ -758,11 +764,11 @@ averageYearTab <-
           ]
 
 ## Food Residual -  compute netSupply
-selectYearsTabFoodResidual <- selectYearsTab[aux == 0 & type == "Food Residual"]
+# selectYearsTabFoodResidual <- selectYearsTab[aux == 0 & type == "Food Residual"]
 
 ## Computing netSupply average
-averageYearTabResidual <-
-    selectYearsTabFoodResidual[
+averageYearSupply <-
+    selectYearsTabFoodEstimate[
         netSupply > 0,
         .(netSupplyAverage = mean(netSupply, na.rm = TRUE)),
         by = list(geographicAreaM49, measuredItemCPC)
@@ -803,7 +809,7 @@ keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
 timeSeriesData <-
     merge(
         timeSeriesData,
-        averageYearTabResidual[, c("geographicAreaM49", "measuredItemCPC",
+        averageYearSupply[, c("geographicAreaM49", "measuredItemCPC",
                                    "timePointYears", "netSupplyAverage",
                                    "flagObservationStatus", "flagMethod"), with =  FALSE],
         by = keys,
@@ -823,10 +829,10 @@ setnames(timeSeriesData, old = c("finalNetSupply", "flagObservationStatus.x", "f
 ## If the commodity is "Food Residual" and is not a protected figure, the amount of
 ## nettrade goes to food. But if nettrade is below zero, food is equal to zero.
 
-timeSeriesData[
-    Protected == FALSE & type == "Food Residual",
-    food := ifelse(netSupply > 0, netSupply, 0)
-    ]
+# timeSeriesData[
+#     Protected == FALSE & type == "Food Residual",
+#     food := ifelse(netSupply > 0, netSupply, 0)
+#     ]
 
 ## Get initial food data for the commodities classified as a "Food Estimate" that don't
 ## have an initial food value in the reference year
@@ -1068,7 +1074,7 @@ if (nrow(data) == 0){
                              with = FALSE]
     
     
-    dataToSave <- subset(dataToSave, timePointYears %in% c(2014:2020))
+    dataToSave <- subset(dataToSave, timePointYears %in% c(2019:2020))
     
     cat("Save the final data...\n")
     stats <- SaveData(domain = "food", dataset = "fooddata", data = dataToSave, waitTimeout = 18000)
